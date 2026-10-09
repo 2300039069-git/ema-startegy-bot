@@ -39,6 +39,7 @@ venv.bak/
 *.log
 *.sqlite
 *.sqlite3
+trade_history.json
 
 # IDE and OS files
 .vscode/
