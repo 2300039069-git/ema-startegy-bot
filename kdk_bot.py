@@ -1,23 +1,10 @@
 #!/usr/bin/env python3
 """
 ================================================================================
-                           KDK TRADE BOT (v3.0)
+                           KDK TRADE BOT (v3.1)
          Heikin Ashi 5m 200 EMA + 20 EMA Pullback Strategy Engine
+             Bilingual Trade Reason Support (English & Telugu)
                       Target: Delta Exchange Testnet
-================================================================================
-Strategy Overview:
-- Timeframe: 5-minute candles (5m).
-- Chart Type: Heikin Ashi (HA) Candles.
-- Indicator 1: 200 EMA (Trend Filter: Price > 200 EMA = Long / Price < 200 EMA = Short).
-- Indicator 2: 20 EMA (Pullback line: Price must touch 20 EMA before entering).
-- Entry Rules:
-    * BUY  : Price > 200 EMA + 20 EMA pullback touch + Solid GREEN Heikin Ashi candle
-    * SELL : Price < 200 EMA + 20 EMA pullback touch + Solid RED Heikin Ashi candle
-- Risk Management:
-    * Stop Loss: Swing low/high of recent 1-3 pullback candles
-    * Take Profit: Strict 1:2 Risk-to-Reward Ratio
-    * Position Sizing: 2% maximum capital risk per trade
-    * Max 2 concurrent open positions
 ================================================================================
 """
 
@@ -224,11 +211,13 @@ class KDKTradeBot:
         return df
 
     def analyze_strategy(self, df: pd.DataFrame, rr_ratio: float = RISK_REWARD_RATIO) -> dict:
-        """Computes Heikin Ashi 5m 200 EMA + 20 EMA strategy metrics."""
+        """Computes Heikin Ashi 5m 200 EMA + 20 EMA strategy metrics with Bilingual reasons."""
         if len(df) < 205:
             return {
                 "signal": "INSUFFICIENT_DATA",
                 "reason": f"Need at least 205 candles, got {len(df)}",
+                "reason_en": "Insufficient historical candles to calculate EMAs.",
+                "reason_te": "EMAs లెక్కించడానికి సరిపడా క్యాండిల్ డేటా లేదు.",
                 "current_price": 0.0,
                 "ema200": 0.0,
                 "ema20": 0.0,
@@ -236,7 +225,6 @@ class KDKTradeBot:
                 "pop_percent": 50.0,
                 "confidence": "LOW",
                 "direction": "NEUTRAL",
-                "guidance": "Insufficient candles",
             }
 
         df["ema200"] = df["close"].ewm(span=200, adjust=False).mean()
@@ -255,7 +243,6 @@ class KDKTradeBot:
         is_bullish_trend = current_price > current_ema200
         is_bearish_trend = current_price < current_ema200
 
-        # Pullback to 20 EMA across past 1-5 candles
         lookback_candles = df_ha.iloc[-6:-1]
         bull_ema20_touch = any(
             (c["low"] <= c["ema20"] * 1.002 and c["high"] >= c["ema20"] * 0.998)
@@ -288,6 +275,11 @@ class KDKTradeBot:
 
             if bull_ema20_touch and ha_is_green and not ha_is_doji:
                 signal = "BUY"
+                reason_en = "BUY Trigger: Above 200 EMA + 20 EMA pullback touch + Solid Green HA candle."
+                reason_te = "బై (BUY) ట్రిగ్గర్: 200 EMA పైన ఉంది, 20 EMA పుల్‌బ్యాక్ టచ్ అయ్యింది, మరియు గ్రీన్ హైకిన్ ఆషి క్యాండిల్ వచ్చింది."
+            else:
+                reason_en = "Bullish Setup: Above 200 EMA. Waiting for 20 EMA pullback and Green HA confirmation."
+                reason_te = "బుల్లిష్ సెటప్: 200 EMA పైన ఉంది. 20 EMA పుల్‌బ్యాక్ మరియు గ్రీన్ హైకిన్ ఆషి కోసం వేచి చూడండి."
 
         else:
             direction = "BEARISH"
@@ -301,6 +293,11 @@ class KDKTradeBot:
 
             if bear_ema20_touch and ha_is_red and not ha_is_doji:
                 signal = "SELL"
+                reason_en = "SELL Trigger: Below 200 EMA + 20 EMA pullback touch + Solid Red HA candle."
+                reason_te = "సెల్ (SELL) ట్రిగ్గర్: 200 EMA క్రింద ఉంది, 20 EMA పుల్‌బ్యాక్ టచ్ అయ్యింది, మరియు రెడ్ హైకిన్ ఆషి క్యాండిల్ వచ్చింది."
+            else:
+                reason_en = "Bearish Setup: Below 200 EMA. Waiting for 20 EMA pullback and Red HA confirmation."
+                reason_te = "బేరిష్ సెటప్: 200 EMA క్రింద ఉంది. 20 EMA పుల్‌బ్యాక్ మరియు రెడ్ హైకిన్ ఆషి కోసం వేచి చూడండి."
 
         pop_score = 40.0
         if (direction == "BULLISH" and current_price > current_ema200) or (direction == "BEARISH" and current_price < current_ema200):
@@ -317,7 +314,6 @@ class KDKTradeBot:
         pop_percent = round(max(35.0, min(92.0, pop_score)), 1)
         confidence = "HIGH PROBABILITY" if pop_percent >= 70 else ("MODERATE PROBABILITY" if pop_percent >= 55 else "LOW PROBABILITY")
 
-        # 2% Capital Risk Sizing
         max_risk_usd = self.total_account_equity_usd * (RISK_PER_TRADE_PCT / 100.0)
         rec_size = max(1, int(max_risk_usd / (risk if risk > 0 else 1.0)))
 
@@ -340,9 +336,11 @@ class KDKTradeBot:
             "ha_is_red": ha_is_red,
             "ha_is_doji": ha_is_doji,
             "recommended_size": rec_size,
+            "reason_en": reason_en,
+            "reason_te": reason_te,
         }
 
-    def place_bracket_market_order(self, product_id: int, symbol: str, side: str, size: int, sl_price: float, tp_price: float, tick_size: float) -> dict:
+    def place_bracket_market_order(self, product_id: int, symbol: str, side: str, size: int, sl_price: float, tp_price: float, tick_size: float, reason_en: str = "", reason_te: str = "") -> dict:
         """Executes a market order with server-side 1:2 RR bracket orders attached."""
         formatted_sl = format_price(sl_price, tick_size)
         formatted_tp = format_price(tp_price, tick_size)
@@ -356,8 +354,12 @@ class KDKTradeBot:
             "bracket_take_profit_price": str(formatted_tp),
         }
 
-        log(f"Submitting {side.upper()} order for {symbol} (Product ID: {product_id}) | Size: {size} contracts (2% Risk Sizing)", "TRADE")
+        log(f"Submitting {side.upper()} order for {symbol} | Size: {size} contracts", "TRADE")
         log(f"Attached Server-Side Brackets -> Stop Loss: {formatted_sl} | Take Profit: {formatted_tp} (1:2 RR)", "TRADE")
+        if reason_en:
+            log(f"Reason (EN): {reason_en}", "INFO")
+        if reason_te:
+            log(f"కారణం (TE): {reason_te}", "INFO")
 
         try:
             time.sleep(RATE_LIMIT_PAUSE)
@@ -414,7 +416,9 @@ class KDKTradeBot:
                 else:
                     sl = analysis["stop_loss"]
                     tp = analysis["take_profit"]
-                    log(f"🚨 VALID HEIKIN ASHI {sig} TRIGGER! Entry: ${curr:.4f} | SL: ${sl:.4f} | TP: ${tp:.4f} (1:2 RR) | PoP: {pop}% | Size: {order_size}", "SIGNAL")
+                    log(f"🚨 VALID HEIKIN ASHI {sig} TRIGGER! Entry: ${curr:.4f} | SL: ${sl:.4f} | TP: ${tp:.4f} (1:2 RR)", "SIGNAL")
+                    log(f"Reason: {analysis['reason_en']}", "SIGNAL")
+                    log(f"కారణం: {analysis['reason_te']}", "SIGNAL")
                     side = "buy" if sig == "BUY" else "sell"
                     res = self.place_bracket_market_order(
                         product_id=product_id,
@@ -423,7 +427,9 @@ class KDKTradeBot:
                         size=order_size,
                         sl_price=sl,
                         tp_price=tp,
-                        tick_size=tick_size
+                        tick_size=tick_size,
+                        reason_en=analysis["reason_en"],
+                        reason_te=analysis["reason_te"]
                     )
                     if res.get("success"):
                         open_product_ids.add(product_id)

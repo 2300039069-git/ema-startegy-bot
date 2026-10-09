@@ -3,21 +3,7 @@
 ================================================================================
                     KDK TRADE BOT - PROFESSIONAL EDITION
         Heikin Ashi 5-Minute 200 EMA + 20 EMA Pullback Strategy Engine
-================================================================================
-Strategy Specifications:
-- Timeframe: 5-minute candles (5m)
-- Chart Type: Heikin Ashi (HA) Candles
-- Trend Filter: 200 EMA (Price > 200 EMA = Bullish Only | Price < 200 EMA = Bearish Only)
-- Pullback Confirmation: Price pulls back and touches 20 EMA (No chasing)
-- Trigger Signals:
-    * BUY  : Above 200 EMA + 20 EMA pullback touch + Solid GREEN Heikin Ashi candle
-    * SELL : Below 200 EMA + 20 EMA pullback touch + Solid RED Heikin Ashi candle
-- Risk Management:
-    * Stop Loss (SL): Recent swing low (Long) / swing high (Short) across 1-3 candles
-    * Take Profit (TP): Strict 1:2 Risk-to-Reward Ratio (Server-Side Brackets)
-    * Position Sizing: 2% maximum capital risk per trade
-    * Max 2 concurrent open positions guard
-- Live Balances & PnL tracking in Indian Rupees (₹ INR) and US Dollars ($ USD)
+             Bilingual Trade Reason Support (English & Telugu - తెలుగు)
 ================================================================================
 """
 
@@ -54,7 +40,7 @@ load_dotenv(dotenv_path=ENV_PATH)
 
 TRADE_HISTORY_FILE = os.path.join(os.path.dirname(__file__), "trade_history.json")
 
-app = FastAPI(title="KDK Trade Bot - Heikin Ashi 200/20 EMA Edition", version="3.0.0")
+app = FastAPI(title="KDK Trade Bot - Heikin Ashi 200/20 EMA Edition", version="3.1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -82,7 +68,7 @@ def save_trade_history(trades: List[Dict[str, Any]]):
     """Saves recorded trades to persistent JSON file."""
     try:
         with open(TRADE_HISTORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(trades, f, indent=2, default=str)
+            json.dump(trades, f, indent=2, default=str, ensure_ascii=False)
     except Exception as e:
         print(f"Error saving trade history: {e}", flush=True)
 
@@ -173,7 +159,6 @@ class BotState:
                 continue
             contract_type = p.get("contract_type", "")
             state = p.get("state", "live")
-            # Filter for perpetual futures
             if contract_type in ["perpetual_futures", "futures"] and state in ["live", None, ""]:
                 symbol = p.get("symbol")
                 prod_id = p.get("id")
@@ -210,14 +195,7 @@ def format_price(price: float, tick_size: float = 0.01) -> str:
 
 
 def calculate_heikin_ashi(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Transforms standard OHLC candlesticks into Heikin Ashi (HA) smoothed candles.
-    HA_Close = (Open + High + Low + Close) / 4
-    HA_Open_0 = (Open_0 + Close_0) / 2
-    HA_Open_i = (HA_Open_{i-1} + HA_Close_{i-1}) / 2
-    HA_High = max(High, HA_Open, HA_Close)
-    HA_Low = min(Low, HA_Open, HA_Close)
-    """
+    """Transforms standard OHLC candlesticks into Heikin Ashi (HA) smoothed candles."""
     df_ha = df.copy()
     if len(df_ha) == 0:
         return df_ha
@@ -298,20 +276,14 @@ def calculate_position_size(account_equity_usd: float, risk_per_contract_usd: fl
 
 def analyze_strategy(df: pd.DataFrame, rr_ratio: float = 2.0, account_equity: float = 189.42) -> dict:
     """
-    Executes the Heikin Ashi 5m 200 EMA + 20 EMA Pullback Strategy.
-    Rules:
-    - 5m Timeframe with Heikin Ashi smoothing
-    - Trend: Price > 200 EMA = Bullish (Long Only) | Price < 200 EMA = Bearish (Short Only)
-    - Pullback: Within last 1-5 candles, price touched 20 EMA line (Low <= 20 EMA for Long / High >= 20 EMA for Short)
-    - Trigger: Solid Green HA confirmation candle for Long / Solid Red HA confirmation candle for Short
-    - SL: Swing low of recent 1-3 candles (Long) / Swing high of recent 1-3 candles (Short)
-    - TP: Strict 1:2 Risk-to-Reward Ratio
-    - Sizing: Max 2% capital risk per trade
+    Executes Heikin Ashi 5m 200 EMA + 20 EMA Pullback Strategy with Bilingual (English & Telugu) explanations.
     """
     if len(df) < 205:
         return {
             "signal": "INSUFFICIENT_DATA",
             "reason": f"Need 205+ candles, got {len(df)}",
+            "reason_en": "Insufficient historical candles to calculate 200 EMA and 20 EMA.",
+            "reason_te": "200 EMA మరియు 20 EMA లెక్కించడానికి సరిపడా క్యాండిల్ డేటా లేదు.",
             "current_price": 0.0,
             "ema200": 0.0,
             "ema20": 0.0,
@@ -320,7 +292,8 @@ def analyze_strategy(df: pd.DataFrame, rr_ratio: float = 2.0, account_equity: fl
             "direction_badge": "⚪ NEUTRAL",
             "pop_percent": 50.0,
             "confidence": "LOW",
-            "guidance": "Insufficient historical candles to calculate 200 EMA.",
+            "guidance": "Insufficient historical candles.",
+            "guidance_te": "సరిపడా క్యాండిల్ డేటా లేదు.",
             "heikin_ashi_status": "N/A",
             "ema20_touched": False,
             "stop_loss": 0.0,
@@ -329,7 +302,7 @@ def analyze_strategy(df: pd.DataFrame, rr_ratio: float = 2.0, account_equity: fl
             "risk_pct": 2.0,
         }
 
-    # 1. Compute 200 EMA and 20 EMA on standard close
+    # 1. Compute 200 EMA and 20 EMA on close
     df["ema200"] = df["close"].ewm(span=200, adjust=False).mean()
     df["ema20"] = df["close"].ewm(span=20, adjust=False).mean()
 
@@ -347,31 +320,29 @@ def analyze_strategy(df: pd.DataFrame, rr_ratio: float = 2.0, account_equity: fl
 
     if ha_is_green and not ha_is_doji:
         ha_status = "🟢 SOLID GREEN HA"
+        ha_status_te = "గ్రీన్ హైకిన్ ఆషి (Green HA)"
     elif ha_is_red and not ha_is_doji:
         ha_status = "🔴 SOLID RED HA"
+        ha_status_te = "రెడ్ హైకిన్ ఆషి (Red HA)"
     else:
         ha_status = "⚪ HA DOJI / INDECISION"
+        ha_status_te = "హైకిన్ ఆషి డోజీ (Doji)"
 
-    # Trend Filter
     is_bullish_trend = current_price > current_ema200
     is_bearish_trend = current_price < current_ema200
 
     # 3. Pullback to 20 EMA Check across last 1 to 5 completed candles
     lookback_candles = df_ha.iloc[-6:-1]
     
-    # Bullish pullback: Did price dip down and touch 20 EMA line? (low <= 20 EMA * 1.002 and high >= 20 EMA * 0.998)
     bull_ema20_touch = any(
         (c["low"] <= c["ema20"] * 1.002 and c["high"] >= c["ema20"] * 0.998)
         for _, c in lookback_candles.iterrows()
     )
-
-    # Bearish pullback: Did price rally up and touch 20 EMA line? (high >= 20 EMA * 0.998 and low <= 20 EMA * 1.002)
     bear_ema20_touch = any(
         (c["high"] >= c["ema20"] * 0.998 and c["low"] <= c["ema20"] * 1.002)
         for _, c in lookback_candles.iterrows()
     )
 
-    # Swing Stop Loss across recent 1-3 pullback candles
     recent_3 = df_ha.iloc[-4:-1]
     swing_low = float(recent_3["low"].min())
     swing_high = float(recent_3["high"].max())
@@ -396,6 +367,13 @@ def analyze_strategy(df: pd.DataFrame, rr_ratio: float = 2.0, account_equity: fl
         # BUY Trigger: Above 200 EMA + 20 EMA touch + Solid Green HA candle completed
         if bull_ema20_touch and ha_is_green and not ha_is_doji:
             signal = "BUY"
+            reason_en = f"BUY Trigger: Price is above 200 EMA (Bullish Trend), pulled back & touched 20 EMA, and formed a solid Green Heikin Ashi confirmation candle. 1:2 RR target with 2% capital risk."
+            reason_te = f"బై (BUY) ట్రిగ్గర్: ధర 200 EMA పైన ఉంది (బుల్లిష్ ట్రెండ్), 20 EMA వరకు పుల్‌బ్యాక్ అయ్యి టచ్ చేసింది, మరియు గ్రీన్ హైకిన్ ఆషి (Green HA) క్యాండిల్ ఏర్పడింది. 1:2 రిస్క్-రివార్డ్ మరియు 2% క్యాపిటల్ రిస్క్."
+        else:
+            touch_desc = "20 EMA Touched" if bull_ema20_touch else "Waiting for 20 EMA Pullback"
+            touch_desc_te = "20 EMA టచ్ అయ్యింది" if bull_ema20_touch else "20 EMA పుల్‌బ్యాక్ కోసం వేచి చూస్తున్నాము"
+            reason_en = f"Bullish Bias (Long Only): Price is above 200 EMA (${current_ema200:.2f}). {touch_desc} & {ha_status}. No chasing; enter BUY when pullback confirms."
+            reason_te = f"బుల్లిష్ సెటప్ (లాంగ్ మాత్రమే): ధర 200 EMA పైన ఉంది (${current_ema200:.2f}). {touch_desc_te} & {ha_status_te}. పుల్‌బ్యాక్ కన్ఫర్మేషన్ వచ్చాకే బై చేయాలి."
 
     else:
         direction = "BEARISH"
@@ -411,44 +389,38 @@ def analyze_strategy(df: pd.DataFrame, rr_ratio: float = 2.0, account_equity: fl
         # SELL Trigger: Below 200 EMA + 20 EMA touch + Solid Red HA candle completed
         if bear_ema20_touch and ha_is_red and not ha_is_doji:
             signal = "SELL"
+            reason_en = f"SELL Trigger: Price is below 200 EMA (Bearish Trend), pulled back & touched 20 EMA, and formed a solid Red Heikin Ashi confirmation candle. 1:2 RR target with 2% capital risk."
+            reason_te = f"సెల్ (SELL) ట్రిగ్గర్: ధర 200 EMA క్రింద ఉంది (బేరిష్ ట్రెండ్), 20 EMA వరకు పుల్‌బ్యాక్ అయ్యి టచ్ చేసింది, మరియు రెడ్ హైకిన్ ఆషి (Red HA) క్యాండిల్ ఏర్పడింది. 1:2 రిస్క్-రివార్డ్ మరియు 2% క్యాపిటల్ రిస్క్."
+        else:
+            touch_desc = "20 EMA Touched" if bear_ema20_touch else "Waiting for 20 EMA Pullback"
+            touch_desc_te = "20 EMA టచ్ అయ్యింది" if bear_ema20_touch else "20 EMA పుల్‌బ్యాక్ కోసం వేచి చూస్తున్నాము"
+            reason_en = f"Bearish Bias (Short Only): Price is below 200 EMA (${current_ema200:.2f}). {touch_desc} & {ha_status}. No chasing; enter SELL when pullback confirms."
+            reason_te = f"బేరిష్ సెటప్ (షార్ట్ మాత్రమే): ధర 200 EMA క్రింద ఉంది (${current_ema200:.2f}). {touch_desc_te} & {ha_status_te}. పుల్‌బ్యాక్ కన్ఫర్మేషన్ వచ్చాకే సెల్ చేయాలి."
 
     # 4. Probability of Profit (PoP %) Scoring
     pop_score = 40.0
-    # Trend Points (+20%)
     if (direction == "BULLISH" and current_price > current_ema200) or (direction == "BEARISH" and current_price < current_ema200):
         pop_score += 20.0
-    
-    # 20 EMA Pullback Touch Points (+20%)
     if ema20_touched:
         pop_score += 20.0
-    
-    # Heikin Ashi Confirmation (+15%)
     if (direction == "BULLISH" and ha_is_green and not ha_is_doji) or (direction == "BEARISH" and ha_is_red and not ha_is_doji):
         pop_score += 15.0
     elif ha_is_doji:
         pop_score -= 10.0
-
-    # Trigger confirmed (+10%)
     if signal in ["BUY", "SELL"]:
         pop_score += 10.0
 
     pop_percent = round(max(35.0, min(92.0, pop_score)), 1)
     confidence = "HIGH PROBABILITY" if pop_percent >= 70 else ("MODERATE PROBABILITY" if pop_percent >= 55 else "LOW PROBABILITY")
 
-    # 5. Position Sizing (2% Capital Risk)
     rec_size = calculate_position_size(account_equity_usd=account_equity, risk_per_contract_usd=risk, risk_pct=2.0, min_size=1)
 
-    # 6. Actionable Guidance text in USD and INR
     curr_inr = current_price * USD_INR_RATE
     sl_inr = stop_loss * USD_INR_RATE
     tp_inr = take_profit * USD_INR_RATE
 
-    if direction == "BULLISH":
-        touch_status = "20 EMA Touched" if bull_ema20_touch else "Waiting for 20 EMA touch"
-        guidance = f"BULLISH (LONG): Price above 200 EMA (${current_ema200:.2f}). {touch_status} & {ha_status}. Enter BUY at ${current_price:.2f} (₹{curr_inr:,.2f}), SL: ${stop_loss:.2f} (₹{sl_inr:,.2f}), 1:2 TP: ${take_profit:.2f} (₹{tp_inr:,.2f}). Position Size: {rec_size} contracts (2% Risk)."
-    else:
-        touch_status = "20 EMA Touched" if bear_ema20_touch else "Waiting for 20 EMA touch"
-        guidance = f"BEARISH (SHORT): Price below 200 EMA (${current_ema200:.2f}). {touch_status} & {ha_status}. Enter SELL at ${current_price:.2f} (₹{curr_inr:,.2f}), SL: ${stop_loss:.2f} (₹{sl_inr:,.2f}), 1:2 TP: ${take_profit:.2f} (₹{tp_inr:,.2f}). Position Size: {rec_size} contracts (2% Risk)."
+    guidance = f"{direction} SETUP: Enter {direction == 'BULLISH' and 'BUY' or 'SELL'} around ${current_price:.2f} (₹{curr_inr:,.2f}), SL: ${stop_loss:.2f} (₹{sl_inr:,.2f}), 1:2 TP: ${take_profit:.2f} (₹{tp_inr:,.2f}). Size: {rec_size} contracts (2% Risk)."
+    guidance_te = f"{direction == 'BULLISH' and 'బుల్లిష్ (లాంగ్)' or 'బేరిష్ (షార్ట్)'} సెటప్: ${current_price:.2f} (₹{curr_inr:,.2f}) వద్ద ఎంట్రీ, స్టాప్‌లాస్ (SL): ${stop_loss:.2f} (₹{sl_inr:,.2f}), 1:2 టార్గెట్ (TP): ${take_profit:.2f} (₹{tp_inr:,.2f}). సైజు: {rec_size} కాంట్రాక్టులు (2% రిస్క్)."
 
     return {
         "signal": signal,
@@ -467,6 +439,7 @@ def analyze_strategy(df: pd.DataFrame, rr_ratio: float = 2.0, account_equity: fl
         "direction_badge": direction_badge,
         "action_side": "BUY" if direction == "BULLISH" else "SELL",
         "heikin_ashi_status": ha_status,
+        "heikin_ashi_status_te": ha_status_te,
         "ha_close": float(latest["ha_close"]),
         "ha_open": float(latest["ha_open"]),
         "ha_is_green": ha_is_green,
@@ -477,21 +450,27 @@ def analyze_strategy(df: pd.DataFrame, rr_ratio: float = 2.0, account_equity: fl
         "confidence": confidence,
         "recommended_size": rec_size,
         "risk_pct": 2.0,
+        "reason_en": reason_en,
+        "reason_te": reason_te,
         "guidance": guidance,
+        "guidance_te": guidance_te,
     }
 
 
 def query_active_positions() -> List[Dict[str, Any]]:
-    """Queries active open trades on Delta Exchange with live INR and USD calculations."""
+    """Queries active open trades on Delta Exchange with live INR/USD calculations and bilingual trade reasons."""
     try:
         time.sleep(bot.rate_limit_pause)
         res = bot.client.request("GET", "/v2/positions/margined", auth=True)
         if res.status_code == 200:
             data = res.json().get("result", [])
             active = []
+            history = load_trade_history()
+
             for p in data:
                 size = float(p.get("size", 0))
                 if size != 0:
+                    prod_id = p.get("product_id")
                     entry_price = float(p.get("entry_price") or p.get("avg_entry_price") or 0)
                     mark_price = float(p.get("mark_price") or entry_price)
                     unrealized_pnl_usd = float(p.get("unrealized_pnl") or ((mark_price - entry_price) * size if size > 0 else (entry_price - mark_price) * abs(size)))
@@ -501,6 +480,17 @@ def query_active_positions() -> List[Dict[str, Any]]:
                     p["unrealized_pnl_usd"] = round(unrealized_pnl_usd, 4)
                     p["unrealized_pnl_inr"] = round(unrealized_pnl_inr, 2)
                     p["side"] = "BUY" if size > 0 else "SELL"
+
+                    # Attach Bilingual Reason from history or dynamic generator
+                    rec = next((t for t in history if str(t.get("product_id")) == str(prod_id) and t.get("status") == "OPEN"), None)
+                    if rec:
+                        p["reason_en"] = rec.get("reason_en", "Heikin Ashi 200/20 EMA Pullback Breakout setup.")
+                        p["reason_te"] = rec.get("reason_te", "హైకిన్ ఆషి 200/20 EMA పుల్‌బ్యాక్ బ్రేకౌట్ సెటప్.")
+                    else:
+                        is_buy = size > 0
+                        p["reason_en"] = f"{is_buy and 'BUY' or 'SELL'} Trade: 5m Heikin Ashi 20 EMA pullback touch with 200 EMA trend filter. 1:2 RR bracket attached."
+                        p["reason_te"] = f"{is_buy and 'బై (BUY)' or 'సెల్ (SELL)'} ట్రేడ్: 5m హైకిన్ ఆషి 20 EMA పుల్‌బ్యాక్ టచ్ మరియు 200 EMA ట్రెండ్ ఫిల్టర్. 1:2 రిస్క్-రివార్డ్ ఆర్డర్."
+
                     active.append(p)
             bot.active_positions = active
             return active
@@ -511,10 +501,15 @@ def query_active_positions() -> List[Dict[str, Any]]:
         return []
 
 
-def execute_market_bracket_order(product_id: int, symbol: str, side: str, size: int, sl_price: float, tp_price: float, tick_size: float, pop_percent: float = 75.0, source: str = "BOT") -> dict:
-    """Submits a live Market Order with attached Server-Side 1:2 RR Bracket Orders and logs to Trade Tracker."""
+def execute_market_bracket_order(product_id: int, symbol: str, side: str, size: int, sl_price: float, tp_price: float, tick_size: float, pop_percent: float = 75.0, reason_en: str = "", reason_te: str = "", source: str = "BOT") -> dict:
+    """Submits a live Market Order with attached Server-Side 1:2 RR Bracket Orders and logs Bilingual Reasons to Trade Tracker."""
     formatted_sl = format_price(sl_price, tick_size)
     formatted_tp = format_price(tp_price, tick_size)
+
+    if not reason_en:
+        is_buy = side.lower() == "buy"
+        reason_en = f"{is_buy and 'BUY' or 'SELL'} Trigger: 5m Heikin Ashi 20 EMA pullback touch with 200 EMA trend filter (1:2 RR | 2% Risk)."
+        reason_te = f"{is_buy and 'బై (BUY)' or 'సెల్ (SELL)'} ట్రిగ్గర్: 5m హైకిన్ ఆషి 20 EMA పుల్‌బ్యాక్ టచ్ మరియు 200 EMA ట్రెండ్ ఫిల్టర్ (1:2 RR | 2% రిస్క్)."
 
     order_payload = {
         "product_id": int(product_id),
@@ -525,8 +520,10 @@ def execute_market_bracket_order(product_id: int, symbol: str, side: str, size: 
         "bracket_take_profit_price": str(formatted_tp),
     }
 
-    bot.add_log(f"[{source}] Executing {side.upper()} order for {symbol} (Product ID: {product_id}) | Size: {size} contracts (2% Risk Sizing)", "TRADE")
-    bot.add_log(f"Attached Heikin Ashi 1:2 RR Server Brackets -> Stop Loss: ${formatted_sl} | Take Profit: ${formatted_tp} (PoP: {pop_percent}%)", "TRADE")
+    bot.add_log(f"[{source}] Executing {side.upper()} order for {symbol} | Size: {size} contracts", "TRADE")
+    bot.add_log(f"Attached Heikin Ashi 1:2 RR Server Brackets -> SL: ${formatted_sl} | TP: ${formatted_tp}", "TRADE")
+    bot.add_log(f"Reason (EN): {reason_en}", "INFO")
+    bot.add_log(f"కారణం (TE): {reason_te}", "INFO")
 
     try:
         time.sleep(bot.rate_limit_pause)
@@ -536,7 +533,6 @@ def execute_market_bracket_order(product_id: int, symbol: str, side: str, size: 
             order_id = order_result.get("id", f"ORD-{int(time.time())}")
             entry_price = float(order_result.get("avg_fill_price") or order_result.get("limit_price") or sl_price)
             
-            # Record trade in persistent trade tracker
             trade_entry = {
                 "order_id": str(order_id),
                 "product_id": int(product_id),
@@ -552,6 +548,8 @@ def execute_market_bracket_order(product_id: int, symbol: str, side: str, size: 
                 "rr_ratio": "1:2 Strict",
                 "pop_percent": pop_percent,
                 "strategy": "Heikin Ashi 200/20 EMA Pullback",
+                "reason_en": reason_en,
+                "reason_te": reason_te,
                 "status": "OPEN",
                 "source": source,
                 "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -595,8 +593,8 @@ def scan_single_asset(symbol: str, meta: dict, open_product_ids: set, open_count
             tp_price = analysis["take_profit"]
 
             bot.add_log(f"🚨 VALID HEIKIN ASHI {analysis['signal']} SIGNAL DETECTED FOR {symbol}!", "SIGNAL")
-            bot.add_log(f"200 EMA: ${analysis['ema200']:.2f} | 20 EMA: ${analysis['ema20']:.2f} | HA Status: {analysis['heikin_ashi_status']}", "SIGNAL")
-            bot.add_log(f"Entry: ${analysis['current_price']:.4f} (₹{analysis['current_price_inr']:,.2f}) | SL: ${sl_price:.4f} | TP: ${tp_price:.4f} | 1:2 RR | Size: {order_size} (2% Risk)", "SIGNAL")
+            bot.add_log(f"Reason (EN): {analysis['reason_en']}", "SIGNAL")
+            bot.add_log(f"కారణం (TE): {analysis['reason_te']}", "SIGNAL")
 
             side = "buy" if analysis["signal"] == "BUY" else "sell"
             result = execute_market_bracket_order(
@@ -608,6 +606,8 @@ def scan_single_asset(symbol: str, meta: dict, open_product_ids: set, open_count
                 tp_price=tp_price,
                 tick_size=tick_size,
                 pop_percent=analysis["pop_percent"],
+                reason_en=analysis["reason_en"],
+                reason_te=analysis["reason_te"],
                 source="BOT"
             )
             if result.get("success"):
@@ -702,7 +702,7 @@ def get_status():
 
 @app.get("/api/trades")
 def get_trades():
-    """Returns dedicated trade history and active bot/manual positions with INR & USD PnL."""
+    """Returns dedicated trade history and active bot/manual positions with bilingual reasons."""
     active_positions = query_active_positions()
     history = load_trade_history()
     
@@ -830,7 +830,6 @@ def get_balances():
     try:
         res = bot.client.get_all_wallet_balances()
         if isinstance(res, list):
-            # Calculate total USD equity for 2% position sizing
             total_usd = 0
             for b in res:
                 bal = float(b.get("balance", 0))
@@ -909,7 +908,7 @@ async def save_settings(req: Request):
 
 @app.post("/api/order/place")
 async def manual_place_order(req: Request):
-    """Places a manual order with 1:2 RR bracket protection and records it in Trade Tracker."""
+    """Places a manual order with 1:2 RR bracket protection and bilingual reason."""
     data = await req.json()
     symbol = data.get("symbol") or data.get("asset_name")
     side = data.get("side", "buy").lower()
@@ -927,6 +926,8 @@ async def manual_place_order(req: Request):
     sl_price = float(data.get("stop_loss") or analysis.get("stop_loss", 0.0))
     tp_price = float(data.get("take_profit") or analysis.get("take_profit", 0.0))
     pop_percent = float(analysis.get("pop_percent", 70.0))
+    reason_en = analysis.get("reason_en", "")
+    reason_te = analysis.get("reason_te", "")
 
     result = execute_market_bracket_order(
         product_id=product_id,
@@ -937,6 +938,8 @@ async def manual_place_order(req: Request):
         tp_price=tp_price,
         tick_size=tick_size,
         pop_percent=pop_percent,
+        reason_en=reason_en,
+        reason_te=reason_te,
         source="MANUAL"
     )
     return result

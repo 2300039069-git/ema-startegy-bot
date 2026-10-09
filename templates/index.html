@@ -88,7 +88,7 @@
                             <h1 class="text-xl font-black tracking-tight text-white">KDK Trade Bot</h1>
                             <span class="px-2 py-0.5 text-[11px] font-bold uppercase rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Heikin Ashi 200/20 EMA</span>
                         </div>
-                        <p class="text-xs text-gray-400">5m Heikin Ashi + 200 EMA Trend + 20 EMA Pullback (1:2 RR | 2% Risk)</p>
+                        <p class="text-xs text-gray-400">5m Heikin Ashi + 200/20 EMA | English & Telugu (తెలుగు) Reason Support</p>
                     </div>
                 </div>
 
@@ -159,12 +159,12 @@
                 </div>
 
                 <div class="glass-panel p-4 rounded-2xl shadow-md">
-                    <div class="text-xs text-gray-400 font-medium">Strategy & Timeframe</div>
+                    <div class="text-xs text-gray-400 font-medium">Strategy & Languages</div>
                     <div class="text-2xl font-black mt-1 text-cyan-400 flex items-center justify-between">
-                        <span>5m Heikin Ashi</span>
-                        <i class="fa-solid fa-chart-line text-cyan-400 text-lg opacity-60"></i>
+                        <span>5m HA + 20 EMA</span>
+                        <i class="fa-solid fa-language text-cyan-400 text-lg opacity-60"></i>
                     </div>
-                    <div class="text-[11px] text-gray-400 mt-0.5">200 EMA + 20 EMA Pullback</div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">English & Telugu (తెలుగు)</div>
                 </div>
 
                 <div class="glass-panel p-4 rounded-2xl shadow-md">
@@ -191,7 +191,7 @@
                                 <h2 class="text-lg font-black text-white">Bot Placed Trades & Position Tracker</h2>
                                 <span id="activeTradesCountBadge" class="px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">0 Active</span>
                             </div>
-                            <p class="text-xs text-gray-400">Live positions placed autonomously by the Heikin Ashi 200/20 EMA bot with INR PnL</p>
+                            <p class="text-xs text-gray-400">Live positions placed with full Trade Reasons in <strong>English</strong> &amp; <strong>Telugu (తెలుగు)</strong></p>
                         </div>
                     </div>
 
@@ -213,20 +213,19 @@
                             <tr>
                                 <th class="py-3 px-4">Asset</th>
                                 <th class="py-3 px-3">Side</th>
-                                <th class="py-3 px-3">Strategy</th>
                                 <th class="py-3 px-3">Size</th>
                                 <th class="py-3 px-4">Entry Price</th>
                                 <th class="py-3 px-4">Mark Price</th>
                                 <th class="py-3 px-4">Stop Loss (SL)</th>
-                                <th class="py-3 px-4">Take Profit (1:2 TP)</th>
-                                <th class="py-3 px-4">Live Unrealized PnL</th>
-                                <th class="py-3 px-3">PoP %</th>
+                                <th class="py-3 px-4">1:2 Target (TP)</th>
+                                <th class="py-3 px-4">Live PnL (INR)</th>
+                                <th class="py-3 px-5">Trade Reason (English &amp; తెలుగు)</th>
                                 <th class="py-3 px-4 text-right">Action</th>
                             </tr>
                         </thead>
                         <tbody id="activeTradesTableBody" class="divide-y divide-bordercolor/60">
                             <tr>
-                                <td colspan="11" class="py-8 text-center text-gray-400">
+                                <td colspan="10" class="py-8 text-center text-gray-400">
                                     <i class="fa-solid fa-satellite-dish text-2xl text-indigo-400 mb-2 block animate-pulse"></i>
                                     <span>No active open trades placed yet. The bot is continuously scanning all perpetual futures for Heikin Ashi 20 EMA pullback setups.</span>
                                 </td>
@@ -239,7 +238,7 @@
                 <div class="pt-2 border-t border-bordercolor/60">
                     <button onclick="toggleTradeHistory()" class="flex items-center space-x-2 text-xs font-bold text-gray-400 hover:text-white transition">
                         <i id="historyChevron" class="fa-solid fa-chevron-right text-xs transition-transform duration-200"></i>
-                        <span>View Closed Trades History & Realized PnL</span>
+                        <span>View Closed Trades History, Realized PnL &amp; Bilingual Reasons</span>
                         <span id="historyCountBadge" class="px-2 py-0.2 bg-gray-800 rounded-full text-[10px] text-gray-300">0 Closed</span>
                     </button>
 
@@ -250,17 +249,17 @@
                                 <i class="fa-solid fa-trash mr-1"></i> Clear History
                             </button>
                         </div>
-                        <div class="overflow-x-auto max-h-48 custom-scroll">
+                        <div class="overflow-x-auto max-h-56 custom-scroll">
                             <table class="w-full text-left text-xs text-gray-300">
                                 <thead class="bg-darkbg/90 uppercase text-[10px] text-gray-400 border-b border-bordercolor">
                                     <tr>
                                         <th class="py-2 px-3">Time</th>
                                         <th class="py-2 px-3">Asset</th>
                                         <th class="py-2 px-2">Side</th>
-                                        <th class="py-2 px-2">Source</th>
                                         <th class="py-2 px-3">Entry</th>
                                         <th class="py-2 px-3">Exit</th>
-                                        <th class="py-2 px-3">Realized PnL (INR)</th>
+                                        <th class="py-2 px-3">Realized PnL</th>
+                                        <th class="py-2 px-4">Trade Reason (English &amp; తెలుగు)</th>
                                         <th class="py-2 px-2">Status</th>
                                     </tr>
                                 </thead>
@@ -309,7 +308,7 @@
                 </div>
             </div>
 
-            <!-- All Futures Grid Display -->
+            <!-- All Futures Grid Display with Bilingual Reasons -->
             <div id="futuresGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 <div class="col-span-full py-12 text-center text-gray-400 glass-panel rounded-2xl">
                     <i class="fa-solid fa-spinner fa-spin text-3xl text-emerald-500 mb-3"></i>
@@ -326,7 +325,7 @@
                             <div class="w-3 h-3 rounded-full bg-yellow-500/80"></div>
                             <div class="w-3 h-3 rounded-full bg-green-500/80"></div>
                         </div>
-                        <span class="text-sm font-bold text-gray-200 ml-2">Live Bot Terminal Console</span>
+                        <span class="text-sm font-bold text-gray-200 ml-2">Live Bot Terminal Console (English &amp; తెలుగు Logs)</span>
                     </div>
                     <div class="flex items-center space-x-2">
                         <button onclick="clearLogs()" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-xs text-gray-300 rounded-lg border border-bordercolor transition">
@@ -424,8 +423,20 @@
                         </div>
                     </div>
 
-                    <div id="helperGuidanceText" class="text-[11px] text-gray-300 bg-emerald-950/20 border border-emerald-500/30 p-2.5 rounded-xl">
-                        Loading strategy guidance...
+                    <!-- Bilingual Trade Reason Box -->
+                    <div class="space-y-1.5 pt-1">
+                        <div class="text-[11px] text-gray-200 bg-emerald-950/30 border border-emerald-500/30 p-2.5 rounded-xl">
+                            <div class="flex items-center space-x-1.5 font-bold text-emerald-400 mb-0.5">
+                                <span>🇬🇧 Strategy Reason (English):</span>
+                            </div>
+                            <span id="helperGuidanceText">Loading strategy guidance...</span>
+                        </div>
+                        <div class="text-[11px] text-gray-200 bg-indigo-950/30 border border-indigo-500/30 p-2.5 rounded-xl">
+                            <div class="flex items-center space-x-1.5 font-bold text-indigo-300 mb-0.5">
+                                <span>🇮🇳 ట్రేడ్ కారణం (Telugu):</span>
+                            </div>
+                            <span id="helperGuidanceTextTe">ట్రేడ్ వివరణ లోడ్ అవుతోంది...</span>
+                        </div>
                     </div>
                 </div>
 
@@ -590,7 +601,6 @@
                     const rawLow = Math.min(rawOpen, rawClose) - Math.random() * 15;
                     price = rawClose;
 
-                    // Heikin Ashi calculation
                     const haClose = (rawOpen + rawHigh + rawLow + rawClose) / 4;
                     const haOpen = i === 0 ? (rawOpen + rawClose) / 2 : (prevHaOpen + prevHaClose) / 2;
                     const haHigh = Math.max(rawHigh, haOpen, haClose);
@@ -610,7 +620,6 @@
             function draw() {
                 ctx.clearRect(0, 0, width, height);
 
-                // Grid Lines
                 ctx.strokeStyle = 'rgba(31, 41, 61, 0.4)';
                 ctx.lineWidth = 1;
                 for (let y = 0; y < height; y += 80) {
@@ -626,7 +635,6 @@
                     ctx.stroke();
                 }
 
-                // Volume bars
                 for (let i = 0; i < candles.length; i++) {
                     const c = candles[i];
                     const volHeight = Math.random() * 60 + 10;
@@ -634,7 +642,6 @@
                     ctx.fillRect(c.x, height - volHeight, 14, volHeight);
                 }
 
-                // Heikin Ashi Candlesticks
                 for (let i = 0; i < candles.length; i++) {
                     const c = candles[i];
                     const isBull = c.haClose >= c.haOpen;
@@ -642,20 +649,17 @@
                     ctx.fillStyle = isBull ? 'rgba(16, 185, 129, 0.5)' : 'rgba(244, 63, 94, 0.5)';
                     ctx.lineWidth = 1.5;
 
-                    // Wick
                     ctx.beginPath();
                     ctx.moveTo(c.x + 7, c.haHigh);
                     ctx.lineTo(c.x + 7, c.haLow);
                     ctx.stroke();
 
-                    // Body
                     const bodyTop = Math.min(c.haOpen, c.haClose);
                     const bodyHeight = Math.max(Math.abs(c.haOpen - c.haClose), 3);
                     ctx.fillRect(c.x + 1, bodyTop, 12, bodyHeight);
                     ctx.strokeRect(c.x + 1, bodyTop, 12, bodyHeight);
                 }
 
-                // 200 EMA Line (Glowing Amber)
                 if (ema200Points.length > 1) {
                     ctx.beginPath();
                     ctx.moveTo(ema200Points[0].x, ema200Points[0].y);
@@ -667,7 +671,6 @@
                     ctx.stroke();
                 }
 
-                // 20 EMA Line (Glowing Cyan)
                 if (ema20Points.length > 1) {
                     ctx.beginPath();
                     ctx.moveTo(ema20Points[0].x, ema20Points[0].y);
@@ -687,7 +690,7 @@
         }
 
         // -------------------------------------------------------------
-        // Trades & Position Tracker Logic
+        // Trades & Position Tracker Logic (Bilingual English & Telugu)
         // -------------------------------------------------------------
         async function fetchTrades() {
             try {
@@ -715,7 +718,7 @@
                 if (active.length === 0) {
                     activeTable.innerHTML = `
                         <tr>
-                            <td colspan="11" class="py-8 text-center text-gray-400">
+                            <td colspan="10" class="py-8 text-center text-gray-400">
                                 <i class="fa-solid fa-satellite-dish text-2xl text-indigo-400 mb-2 block animate-pulse"></i>
                                 <span>No active open trades placed yet. The bot is continuously scanning all perpetual futures for Heikin Ashi 20 EMA pullback setups.</span>
                             </td>
@@ -742,26 +745,35 @@
                         const recTrade = history.find(t => String(t.product_id) === String(prodId) && t.status === 'OPEN') || {};
                         const sl = recTrade.stop_loss || (isLong ? (entryPrice * 0.985) : (entryPrice * 1.015));
                         const tp = recTrade.take_profit || (isLong ? (entryPrice * 1.03) : (entryPrice * 0.97));
-                        const pop = recTrade.pop_percent || 75.0;
+                        const rEn = pos.reason_en || recTrade.reason_en || (isLong ? "BUY: Price > 200 EMA + 20 EMA touch + Green HA" : "SELL: Price < 200 EMA + 20 EMA touch + Red HA");
+                        const rTe = pos.reason_te || recTrade.reason_te || (isLong ? "బై: 200 EMA పైన ఉంది, 20 EMA టచ్ అయ్యింది, గ్రీన్ HA వచ్చింది." : "సెల్: 200 EMA క్రింద ఉంది, 20 EMA టచ్ అయ్యింది, రెడ్ HA వచ్చింది.");
 
                         html += `
-                            <tr class="hover:bg-darkbg/50 transition font-mono">
-                                <td class="py-3 px-4 font-bold text-white flex items-center space-x-2">
+                            <tr class="hover:bg-darkbg/50 transition">
+                                <td class="py-3 px-4 font-bold text-white flex items-center space-x-2 font-mono">
                                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
                                     <span>${sym}</span>
                                 </td>
                                 <td class="py-3 px-3">${sideBadge}</td>
-                                <td class="py-3 px-3"><span class="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-300">HA 20 EMA</span></td>
-                                <td class="py-3 px-3 font-bold text-white">${Math.abs(size)}</td>
-                                <td class="py-3 px-4 text-gray-200">$${entryPrice.toFixed(4)}<span class="block text-[10px] text-gray-400">₹${(entryPrice * USD_INR_RATE).toFixed(2)}</span></td>
-                                <td class="py-3 px-4 text-gray-200">$${markPrice.toFixed(4)}<span class="block text-[10px] text-gray-400">₹${(markPrice * USD_INR_RATE).toFixed(2)}</span></td>
-                                <td class="py-3 px-4 text-rose-400">$${sl.toFixed(4)}<span class="block text-[10px] text-gray-400">₹${(sl * USD_INR_RATE).toFixed(2)}</span></td>
-                                <td class="py-3 px-4 text-emerald-400">$${tp.toFixed(4)}<span class="block text-[10px] text-gray-400">₹${(tp * USD_INR_RATE).toFixed(2)}</span></td>
-                                <td class="py-3 px-4 font-black ${pnlColor}">
+                                <td class="py-3 px-3 font-bold text-white font-mono">${Math.abs(size)}</td>
+                                <td class="py-3 px-4 text-gray-200 font-mono">$${entryPrice.toFixed(4)}<span class="block text-[10px] text-gray-400">₹${(entryPrice * USD_INR_RATE).toFixed(2)}</span></td>
+                                <td class="py-3 px-4 text-gray-200 font-mono">$${markPrice.toFixed(4)}<span class="block text-[10px] text-gray-400">₹${(markPrice * USD_INR_RATE).toFixed(2)}</span></td>
+                                <td class="py-3 px-4 text-rose-400 font-mono">$${sl.toFixed(4)}<span class="block text-[10px] text-gray-400">₹${(sl * USD_INR_RATE).toFixed(2)}</span></td>
+                                <td class="py-3 px-4 text-emerald-400 font-mono">$${tp.toFixed(4)}<span class="block text-[10px] text-gray-400">₹${(tp * USD_INR_RATE).toFixed(2)}</span></td>
+                                <td class="py-3 px-4 font-black ${pnlColor} font-mono">
                                     ${pnlSignStr}₹${unPnlInr.toFixed(2)}
                                     <span class="block text-[10px] text-gray-400">${pnlSignStr}$${unPnlUsd.toFixed(2)} USD</span>
                                 </td>
-                                <td class="py-3 px-3"><span class="text-xs font-bold text-emerald-400">${pop}%</span></td>
+                                <td class="py-3 px-5 text-[11px] max-w-xs space-y-1">
+                                    <div class="bg-emerald-950/25 border border-emerald-500/25 p-1.5 rounded-lg text-gray-200">
+                                        <span class="text-emerald-400 font-bold block">🇬🇧 Reason:</span>
+                                        ${rEn}
+                                    </div>
+                                    <div class="bg-indigo-950/25 border border-indigo-500/25 p-1.5 rounded-lg text-gray-200">
+                                        <span class="text-indigo-300 font-bold block">🇮🇳 కారణం (Telugu):</span>
+                                        ${rTe}
+                                    </div>
+                                </td>
                                 <td class="py-3 px-4 text-right">
                                     <button onclick="closePosition(${prodId}, '${sym}', ${Math.abs(size)}, '${isLong ? 'BUY' : 'SELL'}')" class="px-3 py-1 bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-bold transition">
                                         <i class="fa-solid fa-xmark mr-1"></i> Close
@@ -780,15 +792,20 @@
                         const hSide = h.side === 'BUY' ? '<span class="text-emerald-400 font-bold">BUY</span>' : '<span class="text-rose-400 font-bold">SELL</span>';
                         const realPnl = h.realized_pnl_inr || 0;
                         const realPnlClass = realPnl >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold';
+                        const hEn = h.reason_en || "Heikin Ashi 200/20 EMA Pullback setup.";
+                        const hTe = h.reason_te || "హైకిన్ ఆషి 200/20 EMA పుల్‌బ్యాక్ సెటప్.";
                         hHtml += `
                             <tr class="hover:bg-darkbg/40">
                                 <td class="py-2 px-3 text-gray-400 text-[10px]">${h.timestamp || h.closed_at || '---'}</td>
                                 <td class="py-2 px-3 text-white font-bold">${h.symbol}</td>
                                 <td class="py-2 px-2">${hSide}</td>
-                                <td class="py-2 px-2 text-[10px] text-indigo-300">${h.source || 'BOT'}</td>
                                 <td class="py-2 px-3">$${h.entry_price ? parseFloat(h.entry_price).toFixed(2) : '---'}</td>
                                 <td class="py-2 px-3">$${h.exit_price ? parseFloat(h.exit_price).toFixed(2) : '---'}</td>
                                 <td class="py-2 px-3 ${realPnlClass}">₹${realPnl.toFixed(2)}</td>
+                                <td class="py-2 px-4 text-[10px] font-sans text-gray-300 max-w-xs">
+                                    <div class="text-emerald-300">🇬🇧 ${hEn}</div>
+                                    <div class="text-indigo-300 mt-0.5">🇮🇳 ${hTe}</div>
+                                </td>
                                 <td class="py-2 px-2"><span class="px-1.5 py-0.2 rounded text-[10px] ${isClosed ? 'bg-gray-800 text-gray-300' : 'bg-emerald-500/20 text-emerald-400'}">${h.status}</span></td>
                             </tr>
                         `;
@@ -950,6 +967,8 @@
                 const haStatus = info.heikin_ashi_status || '🟢 SOLID GREEN HA';
                 const touched20 = info.ema20_touched;
                 const recSize = info.recommended_size || 1;
+                const reasonEn = info.reason_en || (isBull ? "Price above 200 EMA. Look for 20 EMA touch + Green HA." : "Price below 200 EMA. Look for 20 EMA touch + Red HA.");
+                const reasonTe = info.reason_te || (isBull ? "ధర 200 EMA పైన ఉంది. 20 EMA టచ్ మరియు గ్రీన్ HA కోసం చూడండి." : "ధర 200 EMA క్రింద ఉంది. 20 EMA టచ్ మరియు రెడ్ HA కోసం చూడండి.");
 
                 const cardBorder = isSignal ? 
                     (signal === 'BUY' ? 'border-emerald-500/80 shadow-emerald-500/20' : 'border-rose-500/80 shadow-rose-500/20') :
@@ -1040,12 +1059,15 @@
                                 </div>
                             </div>
 
-                            <!-- Directional Guidance Helper Box -->
-                            <div class="bg-emerald-950/20 p-2.5 rounded-xl border border-emerald-500/30 text-[11px] text-gray-300 flex items-start space-x-2">
-                                <i class="fa-solid fa-circle-info text-emerald-400 mt-0.5"></i>
-                                <div>
-                                    <span class="font-bold text-emerald-300">Strategy Setup:</span>
-                                    <span>${isBull ? 'Look for BUY / LONG when price touches 20 EMA and prints solid Green HA.' : 'Look for SELL / SHORT when price touches 20 EMA and prints solid Red HA.'}</span>
+                            <!-- Bilingual Directional Trade Reason Box -->
+                            <div class="space-y-1.5">
+                                <div class="bg-emerald-950/20 p-2.5 rounded-xl border border-emerald-500/30 text-[11px] text-gray-200">
+                                    <span class="font-bold text-emerald-400 block mb-0.5">🇬🇧 Reason (English):</span>
+                                    <span>${reasonEn}</span>
+                                </div>
+                                <div class="bg-indigo-950/20 p-2.5 rounded-xl border border-indigo-500/30 text-[11px] text-gray-200">
+                                    <span class="font-bold text-indigo-300 block mb-0.5">🇮🇳 ట్రేడ్ కారణం (Telugu):</span>
+                                    <span>${reasonTe}</span>
                                 </div>
                             </div>
                         </div>
@@ -1100,7 +1122,8 @@
             document.getElementById('helperTpPrice').innerText = `$${tp.toFixed(4)}`;
             document.getElementById('helperTpPriceInr').innerText = `≈ ₹${(tp * USD_INR_RATE).toFixed(2)}`;
 
-            document.getElementById('helperGuidanceText').innerText = info.guidance || 'Heikin Ashi 200/20 EMA Pullback with 1:2 RR bracket.';
+            document.getElementById('helperGuidanceText').innerText = info.reason_en || info.guidance || '5m Heikin Ashi 200/20 EMA Pullback setup with 1:2 RR bracket.';
+            document.getElementById('helperGuidanceTextTe').innerText = info.reason_te || info.guidance_te || '5m హైకిన్ ఆషి 200/20 EMA పుల్‌బ్యాక్ సెటప్ మరియు 1:2 రిస్క్-రివార్డ్ బ్రాకెట్ ఆర్డర్.';
             document.getElementById('helperOrderSide').value = isBull ? 'BUY' : 'SELL';
             document.getElementById('helperOrderSize').value = info.recommended_size || info.order_size || 1;
         }
