@@ -832,9 +832,9 @@
                             <tr class="hover:bg-darkbg/50 transition">
                                 <td class="py-3 px-4 font-bold text-white flex items-center space-x-2 font-mono">
                                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                                    <span class="cursor-pointer hover:text-blue-400 hover:underline transition flex items-center gap-1.5" onclick="openDeltaChart('${sym}', event)" title="Click to open ${sym} live chart on Delta Exchange">
+                                    <span class="cursor-pointer hover:text-cyan-400 hover:underline transition flex items-center gap-1.5" onclick="openChartModal('${sym}')" title="Click to open live 5m chart for ${sym}">
                                         <span>${sym}</span>
-                                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-blue-400"></i>
+                                        <i class="fa-solid fa-chart-candlestick text-[10px] text-cyan-400"></i>
                                     </span>
                                 </td>
                                 <td class="py-3 px-3">${sideBadge}</td>
@@ -859,7 +859,10 @@
                                 </td>
                                 <td class="py-3 px-4 text-right">
                                     <div class="flex items-center justify-end space-x-1.5">
-                                        <button onclick="openDeltaChart('${sym}', event)" class="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 rounded-xl text-xs font-bold transition" title="Open ${sym} on Delta Exchange">
+                                        <button onclick="openChartModal('${sym}')" class="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition" title="Open 5m Heikin Ashi chart modal">
+                                            <i class="fa-solid fa-chart-candlestick"></i>
+                                        </button>
+                                        <button onclick="openDeltaChart('${sym}', event, 'tv')" class="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/30 rounded-xl text-xs font-bold transition" title="Direct Full Chart ↗">
                                             <i class="fa-solid fa-arrow-up-right-from-square"></i>
                                         </button>
                                         <button onclick="closePosition(${prodId}, '${sym}', ${Math.abs(size)}, '${isLong ? 'BUY' : 'SELL'}')" class="px-3 py-1 bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-bold transition">
@@ -885,9 +888,9 @@
                         hHtml += `
                             <tr class="hover:bg-darkbg/40">
                                 <td class="py-2 px-3 text-gray-400 text-[10px]">${h.timestamp || h.closed_at || '---'}</td>
-                                <td class="py-2 px-3 text-white font-bold cursor-pointer hover:text-blue-400 hover:underline transition" onclick="openDeltaChart('${h.symbol}', event)" title="Open ${h.symbol} live chart on Delta Exchange">
+                                <td class="py-2 px-3 text-white font-bold cursor-pointer hover:text-cyan-400 hover:underline transition" onclick="openChartModal('${h.symbol}')" title="Open ${h.symbol} live chart">
                                     <span>${h.symbol}</span>
-                                    <i class="fa-solid fa-arrow-up-right-from-square text-[9px] text-gray-400 ml-1"></i>
+                                    <i class="fa-solid fa-chart-candlestick text-[9px] text-cyan-400 ml-1"></i>
                                 </td>
                                 <td class="py-2 px-2">${hSide}</td>
                                 <td class="py-2 px-3">$${h.entry_price ? parseFloat(h.entry_price).toFixed(2) : '---'}</td>
@@ -1171,13 +1174,16 @@
 
                         <!-- Action Buttons -->
                         <div class="mt-4 pt-3 border-t border-bordercolor/60 flex items-center gap-2">
-                            <button onclick="openChartModal('${sym}')" class="px-3.5 py-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition flex items-center shadow-sm" title="Open live 5m Heikin Ashi chart for ${sym}">
+                            <button onclick="openChartModal('${sym}')" class="px-3 py-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition flex items-center shadow-sm" title="Open live 5m Heikin Ashi chart modal">
                                 <i class="fa-solid fa-chart-candlestick mr-1.5 text-emerald-400"></i> Chart
                             </button>
-                            <button onclick="openDeltaChart('${sym}', event, 'india')" class="px-3 py-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/30 rounded-xl text-xs font-bold transition flex items-center" title="Open live ${sym} orderbook and chart on Delta Exchange India">
-                                <i class="fa-solid fa-globe mr-1.5 text-blue-400"></i> Delta ↗
+                            <button onclick="openDeltaChart('${sym}', event, 'tv')" class="px-2.5 py-2 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-300 border border-cyan-500/30 rounded-xl text-xs font-bold transition flex items-center shadow-sm" title="Direct full-screen candlestick chart for ${sym}">
+                                <i class="fa-solid fa-arrow-up-right-from-square mr-1 text-cyan-400"></i> Direct ↗
                             </button>
-                            <button onclick="openTradeHelper('${sym}')" class="px-3 py-2 bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-bold transition" title="Open 1:2 RR trade setup helper">
+                            <button onclick="openDeltaChart('${sym}', event, 'india')" class="px-2.5 py-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/30 rounded-xl text-xs font-bold transition flex items-center" title="Open ${sym} on Delta Exchange India">
+                                <i class="fa-solid fa-globe mr-1 text-blue-400"></i> Delta
+                            </button>
+                            <button onclick="openTradeHelper('${sym}')" class="px-2.5 py-2 bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-bold transition" title="Open 1:2 RR trade setup helper">
                                 <i class="fa-solid fa-wand-magic-sparkles mr-1 text-purple-400"></i> Setup
                             </button>
                             <button onclick="manualOrder('${sym}', 'BUY')" class="flex-1 py-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold transition">
