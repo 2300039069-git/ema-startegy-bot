@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """
 ================================================================================
-                           KDK TRADE BOT (v2.0)
-             All-Futures 200 EMA Pullback Strategy with 1:2 RR
+                           KDK TRADE BOT (v2.5)
+             All-Futures 200 EMA + 50 EMA Strategy with 1:2 RR
+          Multi-Indicator Probability of Profit (PoP %) Engine
                       Target: Delta Exchange Testnet
 ================================================================================
 Strategy Overview:
 - Automatically discovers & scans ALL Perpetual Futures on Delta Exchange.
 - Timeframe: 5-minute candles.
-- 200 EMA trend filtering on close prices using pandas.
+- 200 EMA + 50 EMA trend filtering on close prices using pandas.
+- Multi-indicator Probability of Profit (PoP %) Engine (RSI 14, ATR 14, Volume).
+- Actionable Directional Guidance (BULLISH / BEARISH / NEUTRAL).
 - Triggers:
     * BUY  : Current Price > 200 EMA AND breaks above 3-candle pullback high.
     * SELL : Current Price < 200 EMA AND breaks below 3-candle pullback low.
@@ -51,6 +54,7 @@ POLL_INTERVAL = int(os.getenv("POLL_INTERVAL_SECONDS", "60"))
 RATE_LIMIT_PAUSE = float(os.getenv("RATE_LIMIT_PAUSE", "0.2"))
 DEFAULT_ORDER_SIZE = int(os.getenv("DEFAULT_ORDER_SIZE", "1"))
 RISK_REWARD_RATIO = float(os.getenv("RISK_REWARD_RATIO", "2.0"))
+USD_INR_RATE = 85.0
 
 
 def log(message: str, level: str = "INFO"):
@@ -193,23 +197,30 @@ class KDKTradeBot:
         return df
 
     def analyze_strategy(self, df: pd.DataFrame, rr_ratio: float = RISK_REWARD_RATIO) -> dict:
-        """Computes 200 EMA and 3-candle pullback breakout levels with 1:2 RR."""
+        """Computes 200 EMA, 50 EMA, RSI, ATR, PoP %, and 3-candle pullback breakout levels with 1:2 RR."""
         if len(df) < 205:
             return {
                 "signal": "INSUFFICIENT_DATA",
                 "reason": f"Need at least 205 candles, got {len(df)}",
                 "current_price": 0.0,
                 "ema200": 0.0,
+                "ema50": 0.0,
                 "pullback_high": 0.0,
                 "pullback_low": 0.0,
                 "trend": "N/A",
+                "pop_percent": 50.0,
+                "confidence": "LOW",
+                "direction": "NEUTRAL",
+                "guidance": "Insufficient candles",
             }
 
         df["ema200"] = df["close"].ewm(span=200, adjust=False).mean()
+        df["ema50"] = df["close"].ewm(span=50, adjust=False).mean()
 
         current_candle = df.iloc[-1]
         current_price = float(current_candle["close"])
         current_ema200 = float(current_candle["ema200"])
+        current_ema50 = float(current_candle["ema50"])
 
         pullback_candles = df.iloc[-4:-1]
         pullback_high = float(pullback_candles["high"].max())
@@ -238,17 +249,69 @@ class KDKTradeBot:
             else:
                 signal = "NEUTRAL"
 
+        # RSI(14)
+        delta = df["close"].diff()
+        gain = (delta.where(delta > 0, 0.0)).rolling(window=14, min_periods=1).mean()
+        loss = (-delta.where(delta < 0, 0.0)).rolling(window=14, min_periods=1).mean()
+        rs = gain / (loss + 1e-9)
+        rsi_series = 100 - (100 / (1 + rs))
+        rsi14 = float(rsi_series.iloc[-1]) if not rsi_series.empty else 50.0
+
+        # ATR(14)
+        high_low = df["high"] - df["low"]
+        high_close = (df["high"] - df["close"].shift()).abs()
+        low_close = (df["low"] - df["close"].shift()).abs()
+        tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+        atr_series = tr.rolling(14, min_periods=1).mean()
+        atr14 = float(atr_series.iloc[-1]) if not atr_series.empty else (current_price * 0.005)
+
+        # Directional determination & PoP %
+        is_bull_trend = current_price > current_ema200
+        direction = "BULLISH" if is_bull_trend else "BEARISH"
+        
+        pop_score = 40.0
+        if is_bull_trend and current_price > current_ema50:
+            pop_score += 20.0
+        elif not is_bull_trend and current_price < current_ema50:
+            pop_score += 20.0
+        else:
+            pop_score += 10.0
+
+        if direction == "BULLISH" and 48 <= rsi14 <= 68:
+            pop_score += 20.0
+        elif direction == "BEARISH" and 32 <= rsi14 <= 52:
+            pop_score += 20.0
+        else:
+            pop_score += 10.0
+
+        if signal in ["BUY", "SELL"]:
+            pop_score += 15.0
+
+        pop_percent = round(max(35.0, min(92.0, pop_score)), 1)
+        confidence = "HIGH PROBABILITY" if pop_percent >= 70 else ("MODERATE PROBABILITY" if pop_percent >= 55 else "LOW PROBABILITY")
+
+        sl_calc = pullback_low if direction == "BULLISH" else pullback_high
+        risk_calc = max(abs(current_price - sl_calc), atr14 * 0.5)
+        tp_calc = (current_price + rr_ratio * risk_calc) if direction == "BULLISH" else (current_price - rr_ratio * risk_calc)
+
         return {
             "signal": signal,
             "current_price": current_price,
+            "current_price_inr": round(current_price * USD_INR_RATE, 2),
             "ema200": current_ema200,
+            "ema50": current_ema50,
             "pullback_high": pullback_high,
             "pullback_low": pullback_low,
-            "stop_loss": stop_loss,
-            "take_profit": take_profit,
-            "risk": risk,
+            "stop_loss": stop_loss if signal in ["BUY", "SELL"] else round(sl_calc, 4),
+            "take_profit": take_profit if signal in ["BUY", "SELL"] else round(tp_calc, 4),
+            "risk": risk if risk > 0 else risk_calc,
             "rr_ratio": rr_ratio,
             "trend": "BULLISH (Above 200 EMA)" if current_price > current_ema200 else "BEARISH (Below 200 EMA)",
+            "pop_percent": pop_percent,
+            "confidence": confidence,
+            "direction": direction,
+            "rsi14": round(rsi14, 1),
+            "atr14": round(atr14, 4),
         }
 
     def place_bracket_market_order(self, product_id: int, symbol: str, side: str, size: int, sl_price: float, tp_price: float, tick_size: float) -> dict:
@@ -299,106 +362,62 @@ class KDKTradeBot:
         for symbol, meta in self.futures_products.items():
             product_id = meta.get("product_id")
             tick_size = meta.get("tick_size", 0.01)
-            order_size = meta.get("order_size", 1)
-
-            if product_id in open_product_ids:
-                log(f"[{symbol}] Asset already has an active open position. Skipping scan.", "INFO")
-                continue
+            order_size = meta.get("order_size", DEFAULT_ORDER_SIZE)
 
             df = self.fetch_candles(symbol=symbol, resolution="5m", lookback_days=3)
             if df.empty or len(df) < 205:
                 continue
 
-            analysis = self.analyze_strategy(df)
-            signal = analysis["signal"]
-            current_price = analysis["current_price"]
-            ema200 = analysis["ema200"]
-            pb_high = analysis["pullback_high"]
-            pb_low = analysis["pullback_low"]
-            trend = analysis["trend"]
+            analysis = self.analyze_strategy(df, rr_ratio=RISK_REWARD_RATIO)
+            curr = analysis["current_price"]
+            ema = analysis["ema200"]
+            sig = analysis["signal"]
+            pop = analysis["pop_percent"]
+            dir_bias = analysis["direction"]
 
-            # Print summary row
-            sig_tag = f"🚨 {signal}" if signal in ["BUY", "SELL"] else "NEUTRAL"
-            print(f"{symbol:<12} | Price: {current_price:<12.4f} | 200 EMA: {ema200:<12.4f} | PB-H: {pb_high:<10.4f} | PB-L: {pb_low:<10.4f} | {sig_tag}")
+            log(f"[{symbol:<10}] Price: ${curr:<9.4f} | 200 EMA: ${ema:<9.4f} | Bias: {dir_bias:<7} | PoP: {pop:>4.1f}% | Signal: {sig}", "INFO")
 
-            if signal in ["BUY", "SELL"]:
-                if open_count >= MAX_OPEN_POSITIONS:
-                    log(f"Signal triggered for {symbol}, but max open positions ({MAX_OPEN_POSITIONS}) reached.", "WARN")
-                    break
+            if sig in ["BUY", "SELL"]:
+                if product_id in open_product_ids:
+                    log(f"Signal ignored for {symbol}: Position already active.", "WARN")
+                elif open_count >= MAX_OPEN_POSITIONS:
+                    log(f"Signal ignored for {symbol}: Max positions reached ({open_count}/{MAX_OPEN_POSITIONS}).", "WARN")
+                else:
+                    sl = analysis["stop_loss"]
+                    tp = analysis["take_profit"]
+                    log(f"🚨 VALID {sig} TRIGGER! Entry: ${curr:.4f} | SL: ${sl:.4f} | TP: ${tp:.4f} (1:2 RR) | PoP: {pop}%", "SIGNAL")
+                    side = "buy" if sig == "BUY" else "sell"
+                    res = self.place_bracket_market_order(
+                        product_id=product_id,
+                        symbol=symbol,
+                        side=side,
+                        size=order_size,
+                        sl_price=sl,
+                        tp_price=tp,
+                        tick_size=tick_size
+                    )
+                    if res.get("success"):
+                        open_product_ids.add(product_id)
+                        open_count += 1
 
-                sl_price = analysis["stop_loss"]
-                tp_price = analysis["take_profit"]
-                risk_dist = analysis["risk"]
-                reward_dist = abs(tp_price - current_price)
-
-                log(f"VALID {signal} BREAKOUT DETECTED FOR {symbol}!", "SIGNAL")
-                log(f"Entry: {current_price:.4f} | SL: {sl_price:.4f} | TP: {tp_price:.4f} | 1:2 RR", "SIGNAL")
-
-                side = "buy" if signal == "BUY" else "sell"
-                result = self.place_bracket_market_order(
-                    product_id=product_id,
-                    symbol=symbol,
-                    side=side,
-                    size=order_size,
-                    sl_price=sl_price,
-                    tp_price=tp_price,
-                    tick_size=tick_size
-                )
-                if result.get("success"):
-                    open_count += 1
-                    open_product_ids.add(product_id)
-
-    def run_forever(self):
-        """Starts continuous trading loop running every POLL_INTERVAL seconds."""
-        print("""
-================================================================================
-  _  ______  _  __  _____              _         ____        _   
- | |/ /  _ \| |/ / |_   _| __ __ _  __| | ___   | __ )  ___ | |_ 
- | ' /| | | | ' /    | || '__/ _` |/ _` |/ _ \  |  _ \ / _ \| __|
- | . \| |_| | . \    | || | | (_| | (_| |  __/  | |_) | (_) | |_ 
- |_|\_\____/|_|\_\   |_||_|  \__,_|\__,_|\___|  |____/ \___/ \__|
-                                                                 
-         Professional All-Futures Delta Exchange Trading Bot
-================================================================================
-        """)
-        log(f"Bot started successfully! Target Base URL: {self.base_url}", "SUCCESS")
-        log(f"Monitoring All {len(self.futures_products)} Perpetual Futures Contracts", "INFO")
-        log(f"Timeframe: 5-minute | Strategy: 200 EMA Pullback Breakout (1:2 RR)", "INFO")
-        log(f"Polling Interval: {POLL_INTERVAL}s | Max Concurrent Trades: {MAX_OPEN_POSITIONS}", "INFO")
-
-        while True:
-            try:
+    def run(self):
+        """Autonomous continuous loop."""
+        log(f"Starting KDK Trade Bot loop (Polling every {POLL_INTERVAL}s, Max Open Positions: {MAX_OPEN_POSITIONS})...", "SUCCESS")
+        try:
+            while True:
                 self.run_scan_cycle()
-            except KeyboardInterrupt:
-                print("\n")
-                log("Bot shutdown signal received from user (Ctrl+C). Exiting cleanly...", "WARN")
-                sys.exit(0)
-            except Exception as e:
-                log(f"Unexpected error in main execution loop: {e}", "ERROR")
-
-            log(f"Sleeping for {POLL_INTERVAL} seconds until next market scan...", "INFO")
-            try:
                 time.sleep(POLL_INTERVAL)
-            except KeyboardInterrupt:
-                print("\n")
-                log("Bot stopped by user. Goodbye!", "WARN")
-                sys.exit(0)
-
-
-def main():
-    parser = argparse.ArgumentParser(description="KDK Trade Bot - All-Futures Delta Trader")
-    parser.add_argument("--test-once", action="store_true", help="Run a single market scan cycle and exit")
-    args = parser.parse_args()
-
-    bot = KDKTradeBot(api_key=API_KEY, api_secret=API_SECRET, base_url=BASE_URL)
-
-    if args.test_once:
-        log("Running in single-cycle test mode (--test-once)...", "INFO")
-        bot.run_scan_cycle()
-        log("Single scan cycle finished.", "SUCCESS")
-    else:
-        bot.run_forever()
+        except KeyboardInterrupt:
+            log("Bot shutdown requested by user.", "WARN")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="KDK Trade Bot CLI")
+    parser.add_argument("--scan-once", action="store_true", help="Execute single scan and exit")
+    args = parser.parse_args()
+
+    bot_instance = KDKTradeBot(api_key=API_KEY, api_secret=API_SECRET, base_url=BASE_URL)
+    if args.scan_once:
+        bot_instance.run_scan_cycle()
+    else:
+        bot_instance.run()

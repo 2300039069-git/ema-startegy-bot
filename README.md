@@ -5,29 +5,43 @@
 [![Delta Exchange](https://img.shields.io/badge/Delta_Exchange-API_v2-00C087?style=for-the-badge)](https://www.delta.exchange/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
-An institutional-grade algorithmic trading platform built in Python for **Delta Exchange** (India & Global Testnet/Live). Features dynamic **All-Futures Market Scanning**, 200 EMA trend filtering, 3-candle pullback breakout detection, automated **1:2 Risk-to-Reward server-side bracket orders**, and a modern **Web Dashboard with an interactive Trade Chart background**.
+An institutional-grade algorithmic trading platform built in Python for **Delta Exchange** (India & Global Testnet/Live). Features dynamic **All-Futures Market Scanning**, 200 EMA + 50 EMA trend filtering, 3-candle pullback breakout detection, **Probability of Profit (PoP %)** calculation engine, **Dedicated Bot Placed Trades Tracker with live INR (₹) PnL**, and a modern **Web Dashboard with an interactive Trade Chart background**.
 
 ---
 
 ## 🌟 Key Features
 
+- **🤖 Dedicated Bot Placed Trades & Position Tracker:**
+  - Real-time tracking of all positions placed autonomously by the bot & manual executions.
+  - Live **Unrealized & Realized PnL in Indian Rupees (₹ INR)** and US Dollars ($ USD).
+  - Shows Entry Price, Mark Price, Stop Loss, 1:2 Take Profit Target, and Probability of Profit (PoP %).
+  - **1-Click Position Close Button** (`POST /api/position/close`) directly from the browser.
+  - Persistent trade history logging in `trade_history.json`.
+
+- **🎯 Probability of Profit (PoP %) Engine:**
+  - Multi-indicator statistical model scoring every asset on Delta Exchange from **35% to 92% PoP**.
+  - Analyzes 200 EMA & 50 EMA trend slope, RSI (14) momentum, ATR (14) target feasibility, and Volume surge.
+  - Clear confidence ratings: `HIGH PROBABILITY (>70%)`, `MODERATE PROBABILITY (55-70%)`, `LOW PROBABILITY (<55%)`.
+
+- **🧭 Actionable Directional Trade Guidance (BULLISH vs BEARISH):**
+  - Explicit directional guidance for manual traders:
+    - 🟢 **BULLISH BIAS (BUY SETUP):** Where to enter BUY, recommended SL, and 1:2 Take Profit target.
+    - 🔴 **BEARISH BIAS (SELL SETUP):** Where to enter SELL, recommended SL, and 1:2 Take Profit target.
+  - Interactive **1-Click Trade Setup Helper Modal** with pre-calculated 1:2 RR bracket targets.
+
 - **🌐 All-Futures Dynamic Discovery:** Automatically discovers and scans **ALL tradeable Perpetual Futures contracts** on Delta Exchange (BTC, ETH, SOL, XRP, DOGE, ADA, BNB, and 200+ live markets).
-- **📈 200 EMA Pullback Breakout Strategy (5m Timeframe):**
-  - **Trend Filter:** 200 Exponential Moving Average computed on 5-minute close prices.
-  - **BUY Breakout Trigger:** Price > 200 EMA **AND** Price breaks above 3-candle pullback high.
-  - **SELL Breakdown Trigger:** Price < 200 EMA **AND** Price breaks below 3-candle pullback low.
+
 - **🛡️ Strict 1:2 Risk-to-Reward Server Brackets:**
   - **Stop Loss:** Set at recent swing low (Buy) or swing high (Sell).
   - **Take Profit:** Strict **1:2 RR** target ($\text{Entry} \pm 2 \times \text{Risk}$).
   - Attached directly on Delta Exchange servers via `bracket_stop_loss_price` and `bracket_take_profit_price`.
-- **🛡️ Risk Management:** Enforces a maximum limit of **2 concurrent open positions** across all markets.
-- **💻 Professional Web GUI Dashboard:**
+  - Enforces a maximum limit of **2 concurrent open positions** across all markets.
+
+- **💻 Professional 100% Button-Operated Web Dashboard:**
   - **Dynamic Trade Chart Background Canvas:** Animated candlestick visuals, glowing EMA trendlines, and gridlines.
-  - **Interactive Candlestick Modal:** View historical 5-minute price action and 200 EMA for any asset.
-  - **Search & Filtering:** Instant search bar and filter chips (`All Assets`, `Active Signals Only`, `Bullish`, `Bearish`).
-  - **Live INR (₹) & USD Balances:** Real-time wallet tracking.
-  - **100% Button-Operated:** Start/Stop Bot, Scan All Futures, Check Balances, and Settings.
-- **⚡ 1-Click Manual Execution:** Place pre-calculated 1:2 RR bracket orders on any futures market directly from the UI.
+  - **Interactive Candlestick Modal:** View historical 5-minute price action, 200 EMA, and 50 EMA.
+  - **Search & Filter Chips:** `All Assets`, `🎯 High PoP (>70%)`, `🚨 Active Signals`, `🟢 Bullish`, `🔴 Bearish`.
+  - **Live INR (₹) Demo Balances:** Converted at live/fixed exchange rate.
 
 ---
 
@@ -43,7 +57,7 @@ An institutional-grade algorithmic trading platform built in Python for **Delta 
 ├── start_gui.py              # 1-Click web browser launcher
 ├── run_gui.bat               # Windows batch launcher
 ├── test_connection.py        # Diagnostic script for balance, tickers & auth
-├── test_strategy.py          # Unit test suite verifying 200 EMA & 1:2 RR
+├── test_strategy.py          # Unit test suite verifying 200 EMA, PoP % & 1:2 RR
 └── templates/
     └── index.html            # Dark-themed trading dashboard with dynamic chart background
 ```
@@ -73,12 +87,6 @@ RATE_LIMIT_PAUSE=0.2
 DEFAULT_ORDER_SIZE=1
 RISK_REWARD_RATIO=2.0
 ```
-
-> **Supported Delta Exchange Base URLs:**
-> - India Testnet: `https://cdn-ind.testnet.deltaex.org`
-> - Global Testnet: `https://testnet-api.delta.exchange`
-> - India Production: `https://api.india.delta.exchange`
-> - Global Production: `https://api.delta.exchange`
 
 ---
 
