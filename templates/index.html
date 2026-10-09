@@ -363,12 +363,12 @@
                     </div>
                 </div>
 
-                <!-- Tab Switcher & 1-Click Delta Terminal Button -->
-                <div class="flex items-center flex-wrap gap-2.5">
+                <!-- Tab Switcher & Direct Exchange Buttons -->
+                <div class="flex items-center flex-wrap gap-2">
                     <div class="bg-darkbg p-1 rounded-xl border border-bordercolor flex items-center space-x-1">
                         <button id="tabBtnTv" onclick="switchChartTab('tv')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-md transition flex items-center space-x-1.5">
-                            <i class="fa-solid fa-satellite-dish"></i>
-                            <span>Live Exchange Chart</span>
+                            <i class="fa-solid fa-chart-candlestick"></i>
+                            <span>5m Heikin Ashi Live</span>
                         </button>
                         <button id="tabBtnCanvas" onclick="switchChartTab('canvas')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition flex items-center space-x-1.5">
                             <i class="fa-solid fa-chart-line"></i>
@@ -376,9 +376,19 @@
                         </button>
                     </div>
 
-                    <button onclick="openDeltaChart(currentModalSymbol, event)" class="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition">
+                    <button onclick="openDeltaChart(currentModalSymbol, event, 'india')" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 text-white text-xs font-bold shadow-md shadow-blue-500/25 transition" title="Open in Delta Exchange India Trade Terminal">
                         <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                        <span>Open on Delta Exchange ↗</span>
+                        <span>Delta India ↗</span>
+                    </button>
+
+                    <button onclick="openDeltaChart(currentModalSymbol, event, 'tv')" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-cyan-300 border border-bordercolor active:scale-95 text-xs font-bold transition" title="Open full TradingView chart">
+                        <i class="fa-solid fa-chart-simple"></i>
+                        <span>TradingView ↗</span>
+                    </button>
+
+                    <button onclick="openDeltaChart(currentModalSymbol, event, 'demo')" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-purple-300 border border-bordercolor active:scale-95 text-xs font-bold transition" title="Open Delta Demo Terminal">
+                        <i class="fa-solid fa-flask"></i>
+                        <span>Delta Demo ↗</span>
                     </button>
 
                     <button onclick="closeChartModal()" class="text-gray-400 hover:text-white text-xl px-2.5 py-1 rounded-lg hover:bg-gray-800 transition">
@@ -610,22 +620,27 @@
         // -------------------------------------------------------------
         // Delta Exchange Live Chart Navigation Helper
         // -------------------------------------------------------------
-        function getDeltaExchangeUrl(symbol) {
-            if (!symbol) return 'https://india.delta.exchange/app/trade/futures/BTCUSD';
-            let cleanSym = symbol.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-            const isTestnet = currentBaseUrl && currentBaseUrl.includes('testnet');
-            if (isTestnet) {
-                return `https://testnet.delta.exchange/app/trade/futures/${cleanSym}`;
+        function getDeltaExchangeUrl(symbol, type = 'india') {
+            let cleanSym = (symbol || 'BTCUSD').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+            if (type === 'demo') {
+                return `https://demo.delta.exchange/app/trade/${cleanSym}`;
             }
-            return `https://india.delta.exchange/app/trade/futures/${cleanSym}`;
+            if (type === 'tv') {
+                return `https://www.tradingview.com/chart/?symbol=DELTA:${cleanSym}`;
+            }
+            if (type === 'tv_binance') {
+                return `https://www.tradingview.com/chart/?symbol=BINANCE:${cleanSym}USDT`;
+            }
+            // Verified Delta Exchange India trade terminal path (correct route without /futures/ subpath)
+            return `https://india.delta.exchange/app/trade/${cleanSym}`;
         }
 
-        function openDeltaChart(symbol, e) {
+        function openDeltaChart(symbol, e, type = 'india') {
             if (e && e.stopPropagation) {
                 e.stopPropagation();
             }
             const sym = symbol || currentModalSymbol || 'BTCUSD';
-            const url = getDeltaExchangeUrl(sym);
+            const url = getDeltaExchangeUrl(sym, type);
             window.open(url, '_blank', 'noopener,noreferrer');
         }
 
@@ -1076,11 +1091,11 @@
                             <!-- Card Header -->
                             <div class="flex items-center justify-between border-b border-bordercolor/60 pb-3">
                                 <div>
-                                    <div class="flex items-center space-x-2 cursor-pointer group" onclick="openDeltaChart('${sym}', event)" title="Click to open live ${sym} chart on Delta Exchange">
+                                    <div class="flex items-center space-x-2 cursor-pointer group" onclick="openChartModal('${sym}')" title="Click to view live 5m Heikin Ashi chart for ${sym}">
                                         <h3 class="font-black text-lg text-white group-hover:text-blue-400 group-hover:underline transition">${sym}</h3>
                                         <span class="text-[10px] text-gray-400 font-mono">#${info.product_id || 'N/A'}</span>
-                                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 group-hover:bg-blue-600 group-hover:text-white transition flex items-center gap-1">
-                                            <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i> Delta
+                                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 group-hover:bg-emerald-600 group-hover:text-white transition flex items-center gap-1">
+                                            <i class="fa-solid fa-chart-candlestick text-[9px]"></i> 5m Chart
                                         </span>
                                     </div>
                                     <div class="flex items-center space-x-1.5 mt-1">
@@ -1156,14 +1171,14 @@
 
                         <!-- Action Buttons -->
                         <div class="mt-4 pt-3 border-t border-bordercolor/60 flex items-center gap-2">
-                            <button onclick="openDeltaChart('${sym}', event)" class="px-3 py-2 bg-gradient-to-r from-blue-600/30 to-indigo-600/30 hover:from-blue-600/50 hover:to-indigo-600/50 text-blue-300 border border-blue-500/40 rounded-xl text-xs font-bold transition flex items-center shadow-sm" title="Open live chart directly on Delta Exchange">
+                            <button onclick="openChartModal('${sym}')" class="px-3.5 py-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition flex items-center shadow-sm" title="Open live 5m Heikin Ashi chart for ${sym}">
+                                <i class="fa-solid fa-chart-candlestick mr-1.5 text-emerald-400"></i> Chart
+                            </button>
+                            <button onclick="openDeltaChart('${sym}', event, 'india')" class="px-3 py-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/30 rounded-xl text-xs font-bold transition flex items-center" title="Open live ${sym} orderbook and chart on Delta Exchange India">
                                 <i class="fa-solid fa-globe mr-1.5 text-blue-400"></i> Delta ↗
                             </button>
-                            <button onclick="openChartModal('${sym}')" class="px-3 py-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition">
-                                <i class="fa-solid fa-chart-line mr-1"></i> Chart
-                            </button>
-                            <button onclick="openTradeHelper('${sym}')" class="px-3 py-2 bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-bold transition">
-                                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Setup
+                            <button onclick="openTradeHelper('${sym}')" class="px-3 py-2 bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-bold transition" title="Open 1:2 RR trade setup helper">
+                                <i class="fa-solid fa-wand-magic-sparkles mr-1 text-purple-400"></i> Setup
                             </button>
                             <button onclick="manualOrder('${sym}', 'BUY')" class="flex-1 py-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold transition">
                                 Buy
@@ -1320,51 +1335,29 @@
         function loadTradingViewWidget(symbol) {
             const container = document.getElementById('tradingview_widget_container');
             if (!container) return;
-            container.innerHTML = '';
             
             const cleanSym = (symbol || 'BTCUSD').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-            const tvSymbol = getTradingViewSymbol(cleanSym);
-
-            try {
-                if (typeof TradingView !== 'undefined') {
-                    new TradingView.widget({
-                        "autosize": true,
-                        "symbol": tvSymbol,
-                        "interval": "5",
-                        "timezone": "Asia/Kolkata",
-                        "theme": "dark",
-                        "style": "8", // 8 = Heikin Ashi Candlesticks
-                        "locale": "en",
-                        "toolbar_bg": "#111622",
-                        "enable_publishing": false,
-                        "hide_side_toolbar": false,
-                        "allow_symbol_change": true,
-                        "container_id": "tradingview_widget_container",
-                        "studies": [
-                            "STD;EMA",
-                            "STD;EMA"
-                        ],
-                        "overrides": {
-                            "mainSeriesProperties.style": 8,
-                            "paneProperties.background": "#080b11",
-                            "paneProperties.vertGridProperties.color": "rgba(31, 41, 61, 0.4)",
-                            "paneProperties.horzGridProperties.color": "rgba(31, 41, 61, 0.4)"
-                        }
-                    });
-                } else {
-                    container.innerHTML = `
-                        <div class="flex flex-col items-center justify-center h-full p-8 text-center text-gray-400">
-                            <i class="fa-solid fa-globe text-3xl text-blue-400 mb-3 animate-pulse"></i>
-                            <p class="text-sm font-semibold mb-3">Live Terminal for ${symbol} on Delta Exchange</p>
-                            <button onclick="openDeltaChart('${symbol}', event)" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-lg transition">
-                                Open ${symbol} on Delta Exchange ↗
-                            </button>
-                        </div>
-                    `;
-                }
-            } catch (e) {
-                console.error("TradingView widget load error:", e);
+            let tvPair = `${cleanSym}USDT`;
+            if (cleanSym.endsWith('USD')) {
+                tvPair = `${cleanSym}T`;
             }
+
+            // TradingView official embed widget (5-minute Heikin Ashi candles [style=8], Dark Theme, IST timezone)
+            const embedSrc = `https://s.tradingview.com/widgetembed/?symbol=BINANCE%3A${tvPair}&interval=5&symboledit=1&saveimage=1&toolbarbg=111622&studies=EMA%40tv-basicstudies%2CEMA%40tv-basicstudies&theme=dark&style=8&timezone=Asia%2FKolkata&withdateranges=1&showpopupbutton=1&popupwidth=1000&popupheight=650&locale=en`;
+
+            container.innerHTML = `
+                <div class="relative w-full h-full min-h-[460px] flex flex-col">
+                    <iframe 
+                        id="tradingview_iframe_${cleanSym}"
+                        src="${embedSrc}"
+                        style="width: 100%; height: 100%; min-height: 460px; border: none; border-radius: 16px; background-color: #080b11;"
+                        allowfullscreen="true"
+                        loading="lazy">
+                    </iframe>
+                </div>
+            `;
+            
+            document.getElementById('modalChartMeta').innerText = `Live 5m Heikin Ashi Chart for ${cleanSym} (Binance / Delta Real-Time Feed)`;
         }
 
         async function fetchCanvasCandles(symbol) {
