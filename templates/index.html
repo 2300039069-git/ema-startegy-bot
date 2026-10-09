@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KDK Trade Bot - All Futures Professional Terminal</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#080b11',
+                        cardbg: '#111622',
+                        cardhover: '#161c2b',
+                        bordercolor: '#1f293d',
+                        brandblue: '#3b82f6',
+                        brandemerald: '#10b981',
+                        brandrose: '#f43f5e',
+                        brandpurple: '#8b5cf6',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons & Chart.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { 
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: #080b11;
+        }
+        #chartBackgroundCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.28;
+        }
+        .app-content {
+            position: relative;
+            z-index: 10;
+        }
+        .log-terminal::-webkit-scrollbar, .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .log-terminal::-webkit-scrollbar-track, .custom-scroll::-webkit-scrollbar-track { background: #080b11; }
+        .log-terminal::-webkit-scrollbar-thumb, .custom-scroll::-webkit-scrollbar-thumb { background: #1f293d; border-radius: 3px; }
+        .pulse-dot {
+            animation: pulse-glow 1.5s infinite;
+        }
+        @keyframes pulse-glow {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .glass-panel {
+            background: rgba(17, 22, 34, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(31, 41, 61, 0.8);
+        }
+    </style>
+</head>
+<body class="text-gray-100 min-h-screen flex flex-col relative overflow-x-hidden">
+
+    <!-- Interactive Dynamic Trade Chart Background Canvas -->
+    <canvas id="chartBackgroundCanvas"></canvas>
+
+    <div class="app-content flex flex-col min-h-screen">
+
+        <!-- Top Navigation & Action Header -->
+        <header class="glass-panel sticky top-0 z-40 px-6 py-3 shadow-2xl border-b border-bordercolor">
+            <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+                
+                <!-- Branding -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+                        <i class="fa-solid fa-bolt-lightning text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h1 class="text-xl font-black tracking-tight text-white">KDK Trade Bot</h1>
+                            <span class="px-2 py-0.5 text-[11px] font-bold uppercase rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">All Futures Pro</span>
+                        </div>
+                        <p class="text-xs text-gray-400">200 EMA + 3-Bar Pullback Strategy (1:2 RR)</p>
+                    </div>
+                </div>
+
+                <!-- Live INR Balance & Status Badge -->
+                <div class="flex items-center space-x-3">
+                    <div class="flex items-center space-x-2 bg-darkbg/90 px-3.5 py-1.5 rounded-xl border border-bordercolor shadow-inner">
+                        <span class="text-xs text-gray-400 font-medium">Demo Balance:</span>
+                        <span id="topBarInrBalance" class="text-xs font-black text-emerald-400 font-mono">₹ --.-- INR</span>
+                    </div>
+
+                    <div class="flex items-center space-x-2 bg-darkbg/90 px-3.5 py-1.5 rounded-xl border border-bordercolor shadow-inner">
+                        <div id="statusPulse" class="w-3 h-3 rounded-full bg-red-500"></div>
+                        <span id="statusText" class="text-xs font-bold text-red-400 uppercase tracking-wider">STOPPED</span>
+                    </div>
+                </div>
+
+                <!-- Main Control Buttons -->
+                <div class="flex items-center flex-wrap gap-2.5">
+                    <button id="btnStart" onclick="startBot()" class="flex items-center space-x-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-sm font-bold shadow-lg shadow-emerald-600/25 transition duration-150">
+                        <i class="fa-solid fa-play"></i>
+                        <span>Start Bot</span>
+                    </button>
+
+                    <button id="btnStop" onclick="stopBot()" class="flex items-center space-x-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-sm font-bold shadow-lg shadow-rose-600/25 transition duration-150">
+                        <i class="fa-solid fa-stop"></i>
+                        <span>Stop Bot</span>
+                    </button>
+
+                    <button id="btnScan" onclick="scanNow()" class="flex items-center space-x-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-sm font-bold shadow-lg shadow-blue-600/25 transition duration-150">
+                        <i id="scanIcon" class="fa-solid fa-radar"></i>
+                        <span>Scan All Futures</span>
+                    </button>
+
+                    <button onclick="openBalanceModal()" class="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 active:scale-95 text-white text-sm font-bold shadow-lg shadow-purple-600/25 transition duration-150">
+                        <i class="fa-solid fa-indian-rupee-sign"></i>
+                        <span>Balances (INR)</span>
+                    </button>
+
+                    <button onclick="openSettingsModal()" class="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 active:scale-95 text-gray-200 border border-bordercolor text-sm font-bold transition duration-150">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>Settings</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Container -->
+        <main class="max-w-7xl mx-auto w-full p-6 space-y-6 flex-1">
+
+            <!-- Top Metric Stats Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="glass-panel p-4 rounded-2xl shadow-md">
+                    <div class="text-xs text-gray-400 font-medium">Demo Balance (INR)</div>
+                    <div class="text-2xl font-black mt-1 text-emerald-400 flex items-center justify-between font-mono">
+                        <span id="metricBalanceInr">₹16,100.29</span>
+                        <i class="fa-solid fa-indian-rupee-sign text-emerald-400 text-lg opacity-60"></i>
+                    </div>
+                    <div class="text-[11px] text-gray-400 mt-0.5" id="metricBalanceUsd">≈ $189.42 USD</div>
+                </div>
+
+                <div class="glass-panel p-4 rounded-2xl shadow-md">
+                    <div class="text-xs text-gray-400 font-medium">Monitored Futures Assets</div>
+                    <div class="text-2xl font-black mt-1 text-white flex items-center justify-between">
+                        <span id="metricTotalAssets">-- Futures</span>
+                        <i class="fa-solid fa-cubes text-blue-500 text-lg opacity-60"></i>
+                    </div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">All Delta Perpetual Futures</div>
+                </div>
+
+                <div class="glass-panel p-4 rounded-2xl shadow-md">
+                    <div class="text-xs text-gray-400 font-medium">Active Trades / Limit</div>
+                    <div class="text-2xl font-black mt-1 text-white flex items-center justify-between">
+                        <span id="metricPositions">0 / 2</span>
+                        <i class="fa-solid fa-shield-halved text-indigo-400 text-lg opacity-60"></i>
+                    </div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">Max 2 Concurrent Trades</div>
+                </div>
+
+                <div class="glass-panel p-4 rounded-2xl shadow-md">
+                    <div class="text-xs text-gray-400 font-medium">Risk-to-Reward Ratio</div>
+                    <div class="text-2xl font-black mt-1 text-purple-400 flex items-center justify-between">
+                        <span>1 : 2 Strict</span>
+                        <i class="fa-solid fa-chart-line text-purple-400 text-lg opacity-60"></i>
+                    </div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">Automated Server Brackets</div>
+                </div>
+            </div>
+
+            <!-- All-Futures Market Explorer Toolbar -->
+            <div class="glass-panel p-4 rounded-2xl shadow-lg space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center space-x-2">
+                        <h2 class="text-lg font-black text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-chart-simple text-blue-400"></i>
+                            <span>All Futures Market Scanner</span>
+                        </h2>
+                        <span id="scanCountBadge" class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">0 Scanned</span>
+                    </div>
+
+                    <div class="flex items-center space-x-2 text-xs text-gray-400" id="lastScanLabel">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>Last Scan: Never</span>
+                    </div>
+                </div>
+
+                <!-- Search & Filters Bar -->
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-bordercolor/50">
+                    <!-- Search Input -->
+                    <div class="relative flex-1 min-w-[240px]">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-2.5 text-gray-500 text-xs"></i>
+                        <input type="text" id="searchAssetInput" onkeyup="filterAssets()" placeholder="Search asset (e.g. BTC, ETH, SOL, DOGE, XRP)..." class="w-full bg-darkbg border border-bordercolor rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:border-blue-500 outline-none">
+                    </div>
+
+                    <!-- Filter Chips -->
+                    <div class="flex items-center flex-wrap gap-2">
+                        <button onclick="setFilter('ALL')" id="filterBtn-ALL" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition">All Assets</button>
+                        <button onclick="setFilter('SIGNALS')" id="filterBtn-SIGNALS" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-400 hover:text-white border border-bordercolor transition">🚨 Active Signals (BUY/SELL)</button>
+                        <button onclick="setFilter('BULLISH')" id="filterBtn-BULLISH" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-400 hover:text-white border border-bordercolor transition">🟢 Bullish (> 200 EMA)</button>
+                        <button onclick="setFilter('BEARISH')" id="filterBtn-BEARISH" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-400 hover:text-white border border-bordercolor transition">🔴 Bearish (< 200 EMA)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Futures Grid Display -->
+            <div id="futuresGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div class="col-span-full py-12 text-center text-gray-400 glass-panel rounded-2xl">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl text-blue-500 mb-3"></i>
+                    <p class="text-sm font-semibold">Loading and scanning Perpetual Futures on Delta Exchange...</p>
+                </div>
+            </div>
+
+            <!-- Live Terminal Log Console -->
+            <div class="glass-panel rounded-2xl p-5 shadow-2xl flex flex-col">
+                <div class="flex items-center justify-between pb-3 mb-3 border-b border-bordercolor">
+                    <div class="flex items-center space-x-2">
+                        <div class="flex space-x-1.5">
+                            <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500/80"></div>
+                        </div>
+                        <span class="text-sm font-bold text-gray-200 ml-2">Live Bot Terminal Console</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="clearLogs()" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-xs text-gray-300 rounded-lg border border-bordercolor transition">
+                            <i class="fa-solid fa-trash-can mr-1"></i> Clear
+                        </button>
+                        <button id="btnAutoScroll" onclick="toggleAutoScroll()" class="px-2.5 py-1 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 text-xs rounded-lg border border-blue-500/30 transition">
+                            <i class="fa-solid fa-arrow-down mr-1"></i> Auto-Scroll: ON
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="logTerminal" class="log-terminal bg-darkbg/90 p-4 rounded-xl font-mono text-xs text-gray-300 h-64 overflow-y-auto space-y-1.5 border border-bordercolor/60">
+                    <div class="text-gray-500 italic">Initializing live terminal feed...</div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Interactive Trading Chart Modal -->
+    <div id="chartModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel border border-bordercolor w-full max-w-4xl rounded-3xl shadow-2xl p-6 relative flex flex-col max-h-[90vh]">
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-bordercolor">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                            <span id="modalChartSymbol">BTCUSD</span>
+                            <span class="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">5-Minute Candles</span>
+                        </h3>
+                        <p class="text-xs text-gray-400" id="modalChartMeta">200 EMA + 1:2 RR Bracket Preview</p>
+                    </div>
+                </div>
+                <button onclick="closeChartModal()" class="text-gray-400 hover:text-white text-xl px-2"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="flex-1 min-h-[360px] bg-darkbg p-4 rounded-2xl border border-bordercolor/60 relative flex items-center justify-center">
+                <canvas id="interactiveChartCanvas"></canvas>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-bordercolor flex items-center justify-between text-xs text-gray-400">
+                <div class="flex items-center space-x-4">
+                    <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded bg-blue-500 inline-block"></span> <span>Price Close</span></span>
+                    <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded bg-amber-400 inline-block"></span> <span>200 EMA</span></span>
+                </div>
+                <button onclick="closeChartModal()" class="px-5 py-2 bg-gray-800 hover:bg-gray-700 text-white font-bold rounded-xl text-xs">Close Chart</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Balances Modal -->
+    <div id="balanceModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel border border-bordercolor w-full max-w-lg rounded-3xl shadow-2xl p-6 relative">
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-bordercolor">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-indian-rupee-sign text-purple-400 text-lg"></i>
+                    <h3 class="text-lg font-bold text-white">Delta Demo Wallet Balances (INR)</h3>
+                </div>
+                <button onclick="closeBalanceModal()" class="text-gray-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="bg-gradient-to-r from-purple-900/40 to-indigo-900/40 border border-purple-500/30 p-4 rounded-2xl mb-4">
+                <div class="text-xs text-purple-300 font-semibold uppercase tracking-wider">Total Available Balance (INR)</div>
+                <div class="text-3xl font-black text-white mt-1 font-mono flex items-baseline space-x-2">
+                    <span id="modalTotalInr">₹ 16,100.29</span>
+                    <span class="text-xs text-purple-300 font-normal">INR</span>
+                </div>
+                <div class="text-xs text-gray-400 mt-1" id="modalTotalUsd">Equivalent: $189.4152 USD</div>
+            </div>
+
+            <div id="balancesList" class="space-y-2 max-h-60 overflow-y-auto custom-scroll">
+                <div class="text-sm text-gray-400">Loading balances from exchange...</div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button onclick="closeBalanceModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel border border-bordercolor w-full max-w-xl rounded-3xl shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto custom-scroll">
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-bordercolor">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-sliders text-blue-400 text-lg"></i>
+                    <h3 class="text-lg font-bold text-white">Bot Configuration & API Settings</h3>
+                </div>
+                <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <form id="settingsForm" onsubmit="saveSettings(event)" class="space-y-4 text-sm">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Delta Exchange API Key</label>
+                    <input type="text" id="cfgApiKey" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white font-mono text-xs focus:border-blue-500 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Delta Exchange API Secret</label>
+                    <input type="password" id="cfgApiSecret" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white font-mono text-xs focus:border-blue-500 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Base URL</label>
+                    <input type="text" id="cfgBaseUrl" value="https://cdn-ind.testnet.deltaex.org" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white text-xs focus:border-blue-500 outline-none" required>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-1">Max Concurrent Positions</label>
+                        <input type="number" id="cfgMaxPos" value="2" min="1" max="10" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white text-xs focus:border-blue-500 outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-1">Poll Interval (Seconds)</label>
+                        <input type="number" id="cfgPollInterval" value="60" min="10" max="3600" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white text-xs focus:border-blue-500 outline-none" required>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-1">Default Order Size (Contracts)</label>
+                        <input type="number" id="cfgDefaultSize" value="1" min="1" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-1">Risk-to-Reward Ratio</label>
+                        <input type="number" step="0.1" id="cfgRrRatio" value="2.0" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white text-xs" required>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end space-x-3 pt-4 border-t border-bordercolor">
+                    <button type="button" onclick="closeSettingsModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold rounded-xl">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-600/25">Save & Apply</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Frontend Controller & Dynamic Background Script -->
+    <script>
+        let autoScroll = true;
+        let currentFilter = 'ALL';
+        let rawMarketData = {};
+        let modalChartInstance = null;
+        const USD_INR_RATE = 85.0;
+
+        // -------------------------------------------------------------
+        // Dynamic Trading Chart Background Visual Canvas
+        // -------------------------------------------------------------
+        function initTradeChartBackground() {
+            const canvas = document.getElementById('chartBackgroundCanvas');
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            let candles = [];
+            let emaPoints = [];
+
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+                generateBackgroundData();
+            }
+
+            function generateBackgroundData() {
+                candles = [];
+                emaPoints = [];
+                const candleCount = Math.floor(width / 24);
+                let price = height * 0.55;
+                let ema = price;
+
+                for (let i = 0; i < candleCount; i++) {
+                    const open = price;
+                    const change = (Math.random() - 0.49) * 35;
+                    const close = open + change;
+                    const high = Math.max(open, close) + Math.random() * 20;
+                    const low = Math.min(open, close) - Math.random() * 20;
+                    price = close;
+                    
+                    ema = ema + (close - ema) * 0.12;
+                    candles.push({ open, high, low, close, x: i * 24 });
+                    emaPoints.push({ x: i * 24 + 8, y: ema });
+                }
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, width, height);
+
+                // Grid Lines
+                ctx.strokeStyle = 'rgba(31, 41, 61, 0.4)';
+                ctx.lineWidth = 1;
+                for (let y = 0; y < height; y += 80) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                    ctx.stroke();
+                }
+                for (let x = 0; x < width; x += 120) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, height);
+                    ctx.stroke();
+                }
+
+                // Volume bars
+                for (let i = 0; i < candles.length; i++) {
+                    const c = candles[i];
+                    const volHeight = Math.random() * 60 + 10;
+                    ctx.fillStyle = c.close >= c.open ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)';
+                    ctx.fillRect(c.x, height - volHeight, 14, volHeight);
+                }
+
+                // Candlesticks
+                for (let i = 0; i < candles.length; i++) {
+                    const c = candles[i];
+                    const isBull = c.close >= c.open;
+                    ctx.strokeStyle = isBull ? '#10b981' : '#f43f5e';
+                    ctx.fillStyle = isBull ? 'rgba(16, 185, 129, 0.5)' : 'rgba(244, 63, 94, 0.5)';
+                    ctx.lineWidth = 1.5;
+
+                    // Wick
+                    ctx.beginPath();
+                    ctx.moveTo(c.x + 7, c.high);
+                    ctx.lineTo(c.x + 7, c.low);
+                    ctx.stroke();
+
+                    // Body
+                    const bodyTop = Math.min(c.open, c.close);
+                    const bodyHeight = Math.max(Math.abs(c.open - c.close), 3);
+                    ctx.fillRect(c.x + 1, bodyTop, 12, bodyHeight);
+                    ctx.strokeRect(c.x + 1, bodyTop, 12, bodyHeight);
+                }
+
+                // Glowing 200 EMA Line
+                if (emaPoints.length > 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(emaPoints[0].x, emaPoints[0].y);
+                    for (let i = 1; i < emaPoints.length; i++) {
+                        ctx.lineTo(emaPoints[i].x, emaPoints[i].y);
+                    }
+                    ctx.strokeStyle = 'rgba(59, 130, 246, 0.7)';
+                    ctx.lineWidth = 3;
+                    ctx.shadowColor = '#3b82f6';
+                    ctx.shadowBlur = 10;
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+            }
+
+            window.addEventListener('resize', resize);
+            resize();
+            draw();
+            setInterval(draw, 5000);
+        }
+
+        // -------------------------------------------------------------
+        // Status & All-Futures Scanner Logic
+        // -------------------------------------------------------------
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                
+                // Update Status Badge
+                const pulse = document.getElementById('statusPulse');
+                const text = document.getElementById('statusText');
+                if (data.is_running) {
+                    pulse.className = 'w-3 h-3 rounded-full bg-emerald-500 pulse-dot';
+                    text.className = 'text-xs font-bold text-emerald-400 uppercase tracking-wider';
+                    text.innerText = 'RUNNING';
+                } else {
+                    pulse.className = 'w-3 h-3 rounded-full bg-red-500';
+                    text.className = 'text-xs font-bold text-red-400 uppercase tracking-wider';
+                    text.innerText = 'STOPPED';
+                }
+
+                document.getElementById('metricPositions').innerText = `${data.active_positions_count} / ${data.max_positions}`;
+                document.getElementById('metricTotalAssets').innerText = `${data.total_futures_count} Futures`;
+                if (data.last_scan_time) {
+                    document.getElementById('lastScanLabel').innerHTML = `<i class="fa-solid fa-clock-rotate-left mr-1"></i> Last Scan: ${data.last_scan_time}`;
+                }
+
+                rawMarketData = data.market_data || {};
+                renderFuturesGrid();
+            } catch (err) {
+                console.error('Error fetching status:', err);
+            }
+        }
+
+        function setFilter(f) {
+            currentFilter = f;
+            const buttons = ['ALL', 'SIGNALS', 'BULLISH', 'BEARISH'];
+            for (const b of buttons) {
+                const btn = document.getElementById(`filterBtn-${b}`);
+                if (b === f) {
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition shadow-md shadow-blue-500/20';
+                } else {
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-400 hover:text-white border border-bordercolor transition';
+                }
+            }
+            renderFuturesGrid();
+        }
+
+        function filterAssets() {
+            renderFuturesGrid();
+        }
+
+        function renderFuturesGrid() {
+            const grid = document.getElementById('futuresGrid');
+            const searchVal = (document.getElementById('searchAssetInput').value || '').trim().toUpperCase();
+            const entries = Object.entries(rawMarketData);
+            
+            document.getElementById('scanCountBadge').innerText = `${entries.length} Scanned`;
+
+            if (entries.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full py-12 text-center text-gray-400 glass-panel rounded-2xl">
+                        <i class="fa-solid fa-radar text-3xl text-blue-500 mb-3 animate-pulse"></i>
+                        <p class="text-sm font-semibold">Click [Scan All Futures] or [Start Bot] to begin scanning all Delta Exchange Perpetual Futures.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Filter entries
+            let filtered = entries.filter(([sym, info]) => {
+                if (searchVal && !sym.toUpperCase().includes(searchVal) && !(info.underlying || '').toUpperCase().includes(searchVal)) {
+                    return false;
+                }
+                if (currentFilter === 'SIGNALS' && !['BUY', 'SELL'].includes(info.signal)) return false;
+                if (currentFilter === 'BULLISH' && !(info.trend || '').includes('BULLISH')) return false;
+                if (currentFilter === 'BEARISH' && !(info.trend || '').includes('BEARISH')) return false;
+                return true;
+            });
+
+            // Sort: SIGNALS first, then alphabetically
+            filtered.sort((a, b) => {
+                const aSig = ['BUY', 'SELL'].includes(a[1].signal);
+                const bSig = ['BUY', 'SELL'].includes(b[1].signal);
+                if (aSig && !bSig) return -1;
+                if (!aSig && bSig) return 1;
+                return a[0].localeCompare(b[0]);
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full py-8 text-center text-gray-400 glass-panel rounded-2xl text-xs">No assets match your search/filter criteria.</div>`;
+                return;
+            }
+
+            let html = '';
+            for (const [sym, info] of filtered) {
+                const price = info.current_price || 0;
+                const priceInr = price * USD_INR_RATE;
+                const ema = info.ema200 || 0;
+                const pbh = info.pullback_high || 0;
+                const pbl = info.pullback_low || 0;
+                const sl = info.stop_loss || 0;
+                const tp = info.take_profit || 0;
+                const signal = info.signal || 'NEUTRAL';
+                const isBull = (info.trend || '').includes('BULLISH');
+                const isSignal = ['BUY', 'SELL'].includes(signal);
+
+                const cardBorder = isSignal ? 
+                    (signal === 'BUY' ? 'border-emerald-500/80 shadow-emerald-500/20' : 'border-rose-500/80 shadow-rose-500/20') :
+                    'border-bordercolor';
+
+                const sigBadge = signal === 'BUY' ?
+                    '<span class="px-2.5 py-1 text-xs font-black rounded-lg bg-emerald-500/25 text-emerald-400 border border-emerald-500/40 animate-pulse">🚀 BUY BREAKOUT</span>' :
+                    (signal === 'SELL' ?
+                    '<span class="px-2.5 py-1 text-xs font-black rounded-lg bg-rose-500/25 text-rose-400 border border-rose-500/40 animate-pulse">🔻 SELL BREAKDOWN</span>' :
+                    '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-gray-800 text-gray-400">NEUTRAL</span>');
+
+                const trendBadge = isBull ?
+                    '<span class="px-2 py-0.5 text-[11px] font-bold rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">BULLISH</span>' :
+                    '<span class="px-2 py-0.5 text-[11px] font-bold rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">BEARISH</span>';
+
+                html += `
+                    <div class="glass-panel rounded-2xl border ${cardBorder} p-5 shadow-xl flex flex-col justify-between hover:border-blue-500/50 transition duration-150">
+                        <div>
+                            <div class="flex items-center justify-between border-b border-bordercolor/60 pb-3 mb-3">
+                                <div>
+                                    <div class="flex items-center space-x-2">
+                                        <h3 class="font-black text-base text-white">${sym}</h3>
+                                        ${trendBadge}
+                                    </div>
+                                    <span class="text-[11px] text-gray-400">Product ID: ${info.product_id || 'N/A'}</span>
+                                </div>
+                                <div>${sigBadge}</div>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div class="flex items-baseline justify-between">
+                                    <span class="text-xs text-gray-400">Live Price</span>
+                                    <div class="text-right">
+                                        <span class="text-2xl font-black text-white">$${price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 4})}</span>
+                                        <div class="text-xs text-emerald-400 font-mono">≈ ₹${priceInr.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2 text-xs bg-darkbg/80 p-2.5 rounded-xl border border-bordercolor/60">
+                                    <div><span class="text-gray-400">200 EMA:</span> <span class="font-semibold text-gray-200 font-mono">${ema.toFixed(2)}</span></div>
+                                    <div><span class="text-gray-400">Signal:</span> <span class="font-bold ${signal === 'BUY' ? 'text-emerald-400' : (signal === 'SELL' ? 'text-rose-400' : 'text-gray-300')}">${signal}</span></div>
+                                    <div><span class="text-gray-400">PB High:</span> <span class="font-semibold text-blue-400 font-mono">${pbh.toFixed(2)}</span></div>
+                                    <div><span class="text-gray-400">PB Low:</span> <span class="font-semibold text-orange-400 font-mono">${pbl.toFixed(2)}</span></div>
+                                </div>
+
+                                <div class="bg-darkbg/60 p-2.5 rounded-xl border border-bordercolor/40 text-xs space-y-1 font-mono">
+                                    <div class="flex justify-between text-gray-400"><span>Stop Loss (Swing):</span> <span class="text-gray-300 font-bold">${sl ? '$' + sl.toFixed(4) : '---'}</span></div>
+                                    <div class="flex justify-between text-gray-400"><span>Take Profit (1:2):</span> <span class="text-emerald-400 font-bold">${tp ? '$' + tp.toFixed(4) : '---'}</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-bordercolor/60 flex items-center gap-2">
+                            <button onclick="openChartModal('${sym}')" class="px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 rounded-xl text-xs font-bold transition">
+                                <i class="fa-solid fa-chart-line mr-1"></i> Chart
+                            </button>
+                            <button onclick="manualOrder('${sym}', 'BUY')" class="flex-1 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold transition">
+                                Buy (1:2)
+                            </button>
+                            <button onclick="manualOrder('${sym}', 'SELL')" class="flex-1 py-1.5 bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-bold transition">
+                                Sell (1:2)
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            grid.innerHTML = html;
+        }
+
+        async function fetchBalances() {
+            try {
+                const res = await fetch('/api/wallet/balances');
+                const data = await res.json();
+                if (data.success && data.balances) {
+                    let totalInr = 0;
+                    let totalUsd = 0;
+                    
+                    for (const b of data.balances) {
+                        const bal = parseFloat(b.balance || 0);
+                        const balInr = parseFloat(b.balance_inr || 0);
+                        if (b.asset_symbol === 'USD' || b.asset_symbol === 'USDT') {
+                            totalUsd += bal;
+                            totalInr += balInr > 0 ? balInr : (bal * USD_INR_RATE);
+                        } else if (b.asset_symbol === 'INR') {
+                            totalInr += bal;
+                        }
+                    }
+
+                    if (totalInr > 0) {
+                        const inrFormatted = `₹ ${totalInr.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                        document.getElementById('topBarInrBalance').innerText = `${inrFormatted} INR`;
+                        document.getElementById('metricBalanceInr').innerText = inrFormatted;
+                        document.getElementById('metricBalanceUsd').innerText = `≈ $${totalUsd.toFixed(2)} USD`;
+                        document.getElementById('modalTotalInr').innerText = inrFormatted;
+                        document.getElementById('modalTotalUsd').innerText = `Equivalent: $${totalUsd.toFixed(4)} USD`;
+                    }
+                }
+            } catch (e) {
+                console.error('Error fetching balance:', e);
+            }
+        }
+
+        async function openChartModal(symbol) {
+            document.getElementById('chartModal').classList.remove('hidden');
+            document.getElementById('modalChartSymbol').innerText = symbol;
+            document.getElementById('modalChartMeta').innerText = `Loading 5m candlestick data & 200 EMA for ${symbol}...`;
+
+            try {
+                const res = await fetch(`/api/candles/${symbol}?resolution=5m&lookback_days=2`);
+                const data = await res.json();
+                if (data.success && data.candles && data.candles.length > 0) {
+                    renderInteractiveChart(symbol, data.candles);
+                } else {
+                    document.getElementById('modalChartMeta').innerText = `No sufficient candle history found for ${symbol}.`;
+                }
+            } catch (err) {
+                document.getElementById('modalChartMeta').innerText = `Failed to load chart: ${err}`;
+            }
+        }
+
+        function renderInteractiveChart(symbol, candles) {
+            const ctx = document.getElementById('interactiveChartCanvas').getContext('2d');
+            if (modalChartInstance) {
+                modalChartInstance.destroy();
+            }
+
+            const labels = candles.map(c => new Date(c.time * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+            const closePrices = candles.map(c => c.close);
+            const emaValues = candles.map(c => c.ema200);
+
+            document.getElementById('modalChartMeta').innerText = `Latest: $${closePrices[closePrices.length-1]} | 200 EMA: $${emaValues[emaValues.length-1]?.toFixed(2)} (1:2 RR Bracket Preview)`;
+
+            modalChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: `${symbol} Close Price`,
+                            data: closePrices,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                            fill: true,
+                            tension: 0.1,
+                            borderWidth: 2,
+                            pointRadius: 0
+                        },
+                        {
+                            label: '200 EMA',
+                            data: emaValues,
+                            borderColor: '#f59e0b',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            borderDash: [4, 4]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: 'rgba(31, 41, 61, 0.4)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+                        y: { grid: { color: 'rgba(31, 41, 61, 0.4)' }, ticks: { color: '#94a3b8', font: { size: 10 } } }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#e2e8f0', font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        function closeChartModal() {
+            document.getElementById('chartModal').classList.add('hidden');
+            if (modalChartInstance) {
+                modalChartInstance.destroy();
+                modalChartInstance = null;
+            }
+        }
+
+        async function openBalanceModal() {
+            document.getElementById('balanceModal').classList.remove('hidden');
+            const list = document.getElementById('balancesList');
+            list.innerHTML = '<div class="text-sm text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Querying INR balances...</div>';
+            
+            try {
+                const res = await fetch('/api/wallet/balances');
+                const data = await res.json();
+                if (data.success && data.balances) {
+                    let html = '';
+                    let nonZero = 0;
+                    for (const b of data.balances) {
+                        const sym = b.asset_symbol || (b.asset ? b.asset.symbol : `Asset ${b.asset_id}`);
+                        const bal = parseFloat(b.balance || 0);
+                        const avail = parseFloat(b.available_balance || bal);
+                        const balInr = parseFloat(b.balance_inr || (bal * USD_INR_RATE));
+                        const availInr = parseFloat(b.available_balance_inr || balInr);
+
+                        if (bal > 0 || avail > 0 || balInr > 0) {
+                            nonZero++;
+                            html += `
+                                <div class="bg-darkbg p-3.5 rounded-2xl border border-bordercolor flex items-center justify-between">
+                                    <div>
+                                        <div class="font-bold text-white text-sm flex items-center space-x-1.5">
+                                            <span>${sym}</span>
+                                            <span class="text-[10px] px-1.5 py-0.2 bg-purple-500/20 text-purple-300 rounded">INR Converted</span>
+                                        </div>
+                                        <div class="text-xs text-gray-400 mt-0.5">Available: ${avail.toFixed(4)} ${sym}</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-base font-mono font-black text-emerald-400">₹ ${availInr.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                                        <div class="text-[11px] text-gray-400">Total: ₹ ${balInr.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                    if (nonZero === 0) {
+                        html = '<div class="text-sm text-gray-400 bg-darkbg p-4 rounded-xl">All balances are currently 0.00 INR.</div>';
+                    }
+                    list.innerHTML = html;
+                    fetchBalances();
+                } else {
+                    list.innerHTML = `<div class="text-sm text-rose-400 bg-rose-950/30 p-3 rounded-xl border border-rose-800/40">${escapeHtml(data.error || 'Failed to authenticate.')}</div>`;
+                }
+            } catch (e) {
+                list.innerHTML = `<div class="text-sm text-rose-400">Error: ${e}</div>`;
+            }
+        }
+
+        function closeBalanceModal() {
+            document.getElementById('balanceModal').classList.add('hidden');
+        }
+
+        async function fetchLogs() {
+            try {
+                const res = await fetch('/api/logs');
+                const data = await res.json();
+                const terminal = document.getElementById('logTerminal');
+                if (!data.logs || data.logs.length === 0) return;
+
+                const colorMap = {
+                    'INFO': 'text-gray-300',
+                    'WARN': 'text-amber-400 font-semibold',
+                    'ERROR': 'text-rose-400 font-bold',
+                    'SIGNAL': 'text-emerald-400 font-bold bg-emerald-950/30 px-1.5 py-0.5 rounded',
+                    'TRADE': 'text-purple-400 font-bold bg-purple-950/30 px-1.5 py-0.5 rounded',
+                    'SUCCESS': 'text-teal-400 font-semibold',
+                };
+
+                let html = '';
+                for (const l of data.logs) {
+                    const color = colorMap[l.level] || 'text-gray-300';
+                    html += `<div><span class="text-gray-500">[${l.timestamp}]</span> <span class="${color}">[${l.level}]</span> ${escapeHtml(l.message)}</div>`;
+                }
+                terminal.innerHTML = html;
+
+                if (autoScroll) {
+                    terminal.scrollTop = terminal.scrollHeight;
+                }
+            } catch (err) {
+                console.error('Error fetching logs:', err);
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        async function startBot() {
+            try {
+                const res = await fetch('/api/bot/start', { method: 'POST' });
+                const d = await res.json();
+                fetchStatus();
+                fetchLogs();
+            } catch (err) { alert('Failed to start bot: ' + err); }
+        }
+
+        async function stopBot() {
+            try {
+                const res = await fetch('/api/bot/stop', { method: 'POST' });
+                const d = await res.json();
+                fetchStatus();
+                fetchLogs();
+            } catch (err) { alert('Failed to stop bot: ' + err); }
+        }
+
+        async function scanNow() {
+            const icon = document.getElementById('scanIcon');
+            icon.classList.add('fa-spin');
+            try {
+                const res = await fetch('/api/bot/scan', { method: 'POST' });
+                const d = await res.json();
+                fetchStatus();
+                fetchLogs();
+                fetchBalances();
+            } catch (err) {
+                alert('Scan failed: ' + err);
+            } finally {
+                setTimeout(() => icon.classList.remove('fa-spin'), 600);
+            }
+        }
+
+        async function clearLogs() {
+            await fetch('/api/logs/clear', { method: 'POST' });
+            document.getElementById('logTerminal').innerHTML = '<div class="text-gray-500 italic">Logs cleared.</div>';
+        }
+
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            const btn = document.getElementById('btnAutoScroll');
+            btn.innerHTML = `<i class="fa-solid fa-arrow-down mr-1"></i> Auto-Scroll: ${autoScroll ? 'ON' : 'OFF'}`;
+            btn.className = autoScroll ? 
+                'px-2.5 py-1 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 text-xs rounded-lg border border-blue-500/30 transition' :
+                'px-2.5 py-1 bg-gray-800 text-gray-400 hover:bg-gray-700 text-xs rounded-lg border border-bordercolor transition';
+        }
+
+        async function openSettingsModal() {
+            document.getElementById('settingsModal').classList.remove('hidden');
+            try {
+                const res = await fetch('/api/settings');
+                const data = await res.json();
+                document.getElementById('cfgApiKey').value = data.raw_api_key || '';
+                document.getElementById('cfgApiSecret').value = data.raw_api_secret || '';
+                document.getElementById('cfgBaseUrl').value = data.base_url || 'https://cdn-ind.testnet.deltaex.org';
+                document.getElementById('cfgMaxPos').value = data.max_positions || 2;
+                document.getElementById('cfgPollInterval').value = data.poll_interval || 60;
+                document.getElementById('cfgDefaultSize').value = data.default_order_size || 1;
+                document.getElementById('cfgRrRatio').value = data.risk_reward_ratio || 2.0;
+            } catch (err) { console.error('Error loading settings:', err); }
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+
+        async function saveSettings(e) {
+            e.preventDefault();
+            const payload = {
+                api_key: document.getElementById('cfgApiKey').value,
+                api_secret: document.getElementById('cfgApiSecret').value,
+                base_url: document.getElementById('cfgBaseUrl').value,
+                max_positions: parseInt(document.getElementById('cfgMaxPos').value),
+                poll_interval: parseInt(document.getElementById('cfgPollInterval').value),
+                default_order_size: parseInt(document.getElementById('cfgDefaultSize').value),
+                risk_reward_ratio: parseFloat(document.getElementById('cfgRrRatio').value),
+            };
+
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const d = await res.json();
+                closeSettingsModal();
+                fetchStatus();
+                fetchLogs();
+                fetchBalances();
+            } catch (err) {
+                alert('Failed to save settings: ' + err);
+            }
+        }
+
+        async function manualOrder(symbol, side) {
+            if (!confirm(`Place manual ${side} market bracket order for ${symbol} with 1:2 RR?`)) return;
+            try {
+                const res = await fetch('/api/order/place', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol: symbol, side: side })
+                });
+                const d = await res.json();
+                fetchStatus();
+                fetchLogs();
+                fetchBalances();
+            } catch (e) {
+                alert('Order failed: ' + e);
+            }
+        }
+
+        // Initialize Background Visuals & Polling
+        initTradeChartBackground();
+        fetchStatus();
+        fetchBalances();
+        fetchLogs();
+        setInterval(fetchStatus, 4000);
+        setInterval(fetchBalances, 12000);
+        setInterval(fetchLogs, 1500);
+    </script>
+</body>
+</html>
