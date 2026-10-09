@@ -27,9 +27,10 @@
             }
         }
     </script>
-    <!-- FontAwesome Icons & Chart.js -->
+    <!-- FontAwesome Icons & Chart.js & TradingView Widget -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <style>
         body { 
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
@@ -345,36 +346,70 @@
         </main>
     </div>
 
-    <!-- Interactive Heikin Ashi Trading Chart Modal -->
-    <div id="chartModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="glass-panel border border-bordercolor w-full max-w-4xl rounded-3xl shadow-2xl p-6 relative flex flex-col max-h-[90vh]">
-            <div class="flex items-center justify-between pb-3 mb-4 border-b border-bordercolor">
+    <!-- Interactive Heikin Ashi Trading Chart & Live Delta Terminal Modal -->
+    <div id="chartModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel border border-bordercolor w-full max-w-5xl rounded-3xl shadow-2xl p-6 relative flex flex-col max-h-[92vh]">
+            <div class="flex flex-wrap items-center justify-between pb-3 mb-4 border-b border-bordercolor gap-3">
                 <div class="flex items-center space-x-3">
-                    <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg border border-emerald-500/30">
                         <i class="fa-solid fa-chart-candlestick"></i>
                     </div>
                     <div>
-                        <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                        <h3 class="text-lg font-black text-white flex items-center space-x-2">
                             <span id="modalChartSymbol">BTCUSD</span>
-                            <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400">5m Heikin Ashi</span>
+                            <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">5m Heikin Ashi</span>
                         </h3>
-                        <p class="text-xs text-gray-400" id="modalChartMeta">200 EMA (Amber) + 20 EMA (Cyan) + 1:2 RR Preview</p>
+                        <p class="text-xs text-gray-400" id="modalChartMeta">200 EMA (Trend) + 20 EMA (Pullback) Strategy</p>
                     </div>
                 </div>
-                <button onclick="closeChartModal()" class="text-gray-400 hover:text-white text-xl px-2"><i class="fa-solid fa-xmark"></i></button>
+
+                <!-- Tab Switcher & 1-Click Delta Terminal Button -->
+                <div class="flex items-center flex-wrap gap-2.5">
+                    <div class="bg-darkbg p-1 rounded-xl border border-bordercolor flex items-center space-x-1">
+                        <button id="tabBtnTv" onclick="switchChartTab('tv')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-md transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-satellite-dish"></i>
+                            <span>Live Exchange Chart</span>
+                        </button>
+                        <button id="tabBtnCanvas" onclick="switchChartTab('canvas')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span>Bot EMA Canvas</span>
+                        </button>
+                    </div>
+
+                    <button onclick="openDeltaChart(currentModalSymbol, event)" class="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        <span>Open on Delta Exchange ↗</span>
+                    </button>
+
+                    <button onclick="closeChartModal()" class="text-gray-400 hover:text-white text-xl px-2.5 py-1 rounded-lg hover:bg-gray-800 transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
             </div>
 
-            <div class="flex-1 min-h-[360px] bg-darkbg p-4 rounded-2xl border border-bordercolor/60 relative flex items-center justify-center">
+            <!-- TradingView Interactive Widget Container -->
+            <div id="tvWidgetContainerWrapper" class="flex-1 min-h-[440px] bg-darkbg rounded-2xl border border-bordercolor/60 overflow-hidden relative flex items-center justify-center">
+                <div id="tradingview_widget_container" class="w-full h-full min-h-[440px]"></div>
+            </div>
+
+            <!-- Bot Canvas Chart Container (Togglable) -->
+            <div id="canvasChartContainerWrapper" class="hidden flex-1 min-h-[440px] bg-darkbg p-4 rounded-2xl border border-bordercolor/60 relative flex items-center justify-center">
                 <canvas id="interactiveChartCanvas"></canvas>
             </div>
 
-            <div class="mt-4 pt-3 border-t border-bordercolor flex items-center justify-between text-xs text-gray-400">
+            <!-- Footer Details & Quick Action -->
+            <div class="mt-4 pt-3 border-t border-bordercolor flex flex-wrap items-center justify-between text-xs text-gray-400 gap-3">
                 <div class="flex items-center space-x-4">
-                    <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span> <span>HA Close</span></span>
-                    <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded bg-cyan-400 inline-block"></span> <span>20 EMA (Pullback)</span></span>
-                    <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded bg-amber-400 inline-block"></span> <span>200 EMA (Trend)</span></span>
+                    <span class="flex items-center space-x-1.5"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span> <span>HA Close</span></span>
+                    <span class="flex items-center space-x-1.5"><span class="w-3 h-3 rounded bg-cyan-400 inline-block"></span> <span>20 EMA (Pullback Trigger)</span></span>
+                    <span class="flex items-center space-x-1.5"><span class="w-3 h-3 rounded bg-amber-400 inline-block"></span> <span>200 EMA (Trend Filter)</span></span>
                 </div>
-                <button onclick="closeChartModal()" class="px-5 py-2 bg-gray-800 hover:bg-gray-700 text-white font-bold rounded-xl text-xs">Close Chart</button>
+                <div class="flex items-center space-x-3">
+                    <button onclick="openTradeHelper(currentModalSymbol)" class="px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 font-bold rounded-xl text-xs border border-emerald-500/30 transition">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Trade Setup Helper
+                    </button>
+                    <button onclick="closeChartModal()" class="px-5 py-2 bg-gray-800 hover:bg-gray-700 text-white font-bold rounded-xl text-xs transition">Close</button>
+                </div>
             </div>
         </div>
     </div>
@@ -394,7 +429,12 @@
                 <!-- Asset & Bias Header -->
                 <div class="bg-darkbg/80 p-3.5 rounded-2xl border border-bordercolor flex items-center justify-between">
                     <div>
-                        <div class="text-base font-black text-white" id="helperSymbol">BTCUSD</div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-base font-black text-white" id="helperSymbol">BTCUSD</span>
+                            <button onclick="openDeltaChart(activeHelperData?.symbol, event)" class="px-2 py-0.5 rounded-md bg-blue-600/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold hover:bg-blue-600 hover:text-white transition flex items-center gap-1" title="Open live chart on Delta Exchange">
+                                <i class="fa-solid fa-globe text-[9px]"></i> Delta ↗
+                            </button>
+                        </div>
                         <div class="text-gray-400 mt-0.5">Live Price: <span id="helperLivePrice" class="font-bold text-white font-mono">$0.00</span> (<span id="helperLivePriceInr" class="text-emerald-400 font-mono">₹0.00</span>)</div>
                     </div>
                     <div class="text-right">
@@ -562,7 +602,32 @@
         let rawMarketData = {};
         let modalChartInstance = null;
         let activeHelperData = null;
+        let currentBaseUrl = 'https://cdn-ind.testnet.deltaex.org';
+        let currentModalSymbol = 'BTCUSD';
+        let currentChartTab = 'tv';
         const USD_INR_RATE = 85.0;
+
+        // -------------------------------------------------------------
+        // Delta Exchange Live Chart Navigation Helper
+        // -------------------------------------------------------------
+        function getDeltaExchangeUrl(symbol) {
+            if (!symbol) return 'https://india.delta.exchange/app/trade/futures/BTCUSD';
+            let cleanSym = symbol.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+            const isTestnet = currentBaseUrl && currentBaseUrl.includes('testnet');
+            if (isTestnet) {
+                return `https://testnet.delta.exchange/app/trade/futures/${cleanSym}`;
+            }
+            return `https://india.delta.exchange/app/trade/futures/${cleanSym}`;
+        }
+
+        function openDeltaChart(symbol, e) {
+            if (e && e.stopPropagation) {
+                e.stopPropagation();
+            }
+            const sym = symbol || currentModalSymbol || 'BTCUSD';
+            const url = getDeltaExchangeUrl(sym);
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
 
         // -------------------------------------------------------------
         // Dynamic Heikin Ashi Trading Chart Background Canvas
@@ -752,7 +817,10 @@
                             <tr class="hover:bg-darkbg/50 transition">
                                 <td class="py-3 px-4 font-bold text-white flex items-center space-x-2 font-mono">
                                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                                    <span>${sym}</span>
+                                    <span class="cursor-pointer hover:text-blue-400 hover:underline transition flex items-center gap-1.5" onclick="openDeltaChart('${sym}', event)" title="Click to open ${sym} live chart on Delta Exchange">
+                                        <span>${sym}</span>
+                                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-blue-400"></i>
+                                    </span>
                                 </td>
                                 <td class="py-3 px-3">${sideBadge}</td>
                                 <td class="py-3 px-3 font-bold text-white font-mono">${Math.abs(size)}</td>
@@ -775,9 +843,14 @@
                                     </div>
                                 </td>
                                 <td class="py-3 px-4 text-right">
-                                    <button onclick="closePosition(${prodId}, '${sym}', ${Math.abs(size)}, '${isLong ? 'BUY' : 'SELL'}')" class="px-3 py-1 bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-bold transition">
-                                        <i class="fa-solid fa-xmark mr-1"></i> Close
-                                    </button>
+                                    <div class="flex items-center justify-end space-x-1.5">
+                                        <button onclick="openDeltaChart('${sym}', event)" class="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 rounded-xl text-xs font-bold transition" title="Open ${sym} on Delta Exchange">
+                                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                        </button>
+                                        <button onclick="closePosition(${prodId}, '${sym}', ${Math.abs(size)}, '${isLong ? 'BUY' : 'SELL'}')" class="px-3 py-1 bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-bold transition">
+                                            <i class="fa-solid fa-xmark mr-1"></i> Close
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         `;
@@ -797,7 +870,10 @@
                         hHtml += `
                             <tr class="hover:bg-darkbg/40">
                                 <td class="py-2 px-3 text-gray-400 text-[10px]">${h.timestamp || h.closed_at || '---'}</td>
-                                <td class="py-2 px-3 text-white font-bold">${h.symbol}</td>
+                                <td class="py-2 px-3 text-white font-bold cursor-pointer hover:text-blue-400 hover:underline transition" onclick="openDeltaChart('${h.symbol}', event)" title="Open ${h.symbol} live chart on Delta Exchange">
+                                    <span>${h.symbol}</span>
+                                    <i class="fa-solid fa-arrow-up-right-from-square text-[9px] text-gray-400 ml-1"></i>
+                                </td>
                                 <td class="py-2 px-2">${hSide}</td>
                                 <td class="py-2 px-3">$${h.entry_price ? parseFloat(h.entry_price).toFixed(2) : '---'}</td>
                                 <td class="py-2 px-3">$${h.exit_price ? parseFloat(h.exit_price).toFixed(2) : '---'}</td>
@@ -876,6 +952,9 @@
                 document.getElementById('metricPositions').innerText = `${data.active_positions_count} / ${data.max_positions}`;
                 if (data.last_scan_time) {
                     document.getElementById('lastScanLabel').innerHTML = `<i class="fa-solid fa-clock-rotate-left mr-1"></i> Last Scan: ${data.last_scan_time}`;
+                }
+                if (data.base_url) {
+                    currentBaseUrl = data.base_url;
                 }
 
                 rawMarketData = data.market_data || {};
@@ -997,9 +1076,12 @@
                             <!-- Card Header -->
                             <div class="flex items-center justify-between border-b border-bordercolor/60 pb-3">
                                 <div>
-                                    <div class="flex items-center space-x-2">
-                                        <h3 class="font-black text-lg text-white">${sym}</h3>
+                                    <div class="flex items-center space-x-2 cursor-pointer group" onclick="openDeltaChart('${sym}', event)" title="Click to open live ${sym} chart on Delta Exchange">
+                                        <h3 class="font-black text-lg text-white group-hover:text-blue-400 group-hover:underline transition">${sym}</h3>
                                         <span class="text-[10px] text-gray-400 font-mono">#${info.product_id || 'N/A'}</span>
+                                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 group-hover:bg-blue-600 group-hover:text-white transition flex items-center gap-1">
+                                            <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i> Delta
+                                        </span>
                                     </div>
                                     <div class="flex items-center space-x-1.5 mt-1">
                                         ${dirBadge}
@@ -1074,17 +1156,20 @@
 
                         <!-- Action Buttons -->
                         <div class="mt-4 pt-3 border-t border-bordercolor/60 flex items-center gap-2">
-                            <button onclick="openChartModal('${sym}')" class="px-3 py-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 rounded-xl text-xs font-bold transition">
+                            <button onclick="openDeltaChart('${sym}', event)" class="px-3 py-2 bg-gradient-to-r from-blue-600/30 to-indigo-600/30 hover:from-blue-600/50 hover:to-indigo-600/50 text-blue-300 border border-blue-500/40 rounded-xl text-xs font-bold transition flex items-center shadow-sm" title="Open live chart directly on Delta Exchange">
+                                <i class="fa-solid fa-globe mr-1.5 text-blue-400"></i> Delta ↗
+                            </button>
+                            <button onclick="openChartModal('${sym}')" class="px-3 py-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition">
                                 <i class="fa-solid fa-chart-line mr-1"></i> Chart
                             </button>
-                            <button onclick="openTradeHelper('${sym}')" class="px-3 py-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition">
+                            <button onclick="openTradeHelper('${sym}')" class="px-3 py-2 bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-bold transition">
                                 <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Setup
                             </button>
                             <button onclick="manualOrder('${sym}', 'BUY')" class="flex-1 py-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold transition">
-                                Buy (1:2)
+                                Buy
                             </button>
                             <button onclick="manualOrder('${sym}', 'SELL')" class="flex-1 py-2 bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-bold transition">
-                                Sell (1:2)
+                                Sell
                             </button>
                         </div>
                     </div>
@@ -1200,11 +1285,90 @@
             }
         }
 
-        async function openChartModal(symbol) {
-            document.getElementById('chartModal').classList.remove('hidden');
-            document.getElementById('modalChartSymbol').innerText = symbol;
-            document.getElementById('modalChartMeta').innerText = `Loading 5m Heikin Ashi candles & 200/20 EMA for ${symbol}...`;
+        function switchChartTab(tab) {
+            currentChartTab = tab;
+            const btnTv = document.getElementById('tabBtnTv');
+            const btnCanvas = document.getElementById('tabBtnCanvas');
+            const wrapperTv = document.getElementById('tvWidgetContainerWrapper');
+            const wrapperCanvas = document.getElementById('canvasChartContainerWrapper');
 
+            if (tab === 'tv') {
+                if (btnTv) btnTv.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-md transition flex items-center space-x-1.5';
+                if (btnCanvas) btnCanvas.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition flex items-center space-x-1.5';
+                if (wrapperTv) wrapperTv.classList.remove('hidden');
+                if (wrapperCanvas) wrapperCanvas.classList.add('hidden');
+                loadTradingViewWidget(currentModalSymbol);
+            } else {
+                if (btnCanvas) btnCanvas.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-md transition flex items-center space-x-1.5';
+                if (btnTv) btnTv.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition flex items-center space-x-1.5';
+                if (wrapperTv) wrapperTv.classList.add('hidden');
+                if (wrapperCanvas) wrapperCanvas.classList.remove('hidden');
+                fetchCanvasCandles(currentModalSymbol);
+            }
+        }
+
+        function getTradingViewSymbol(symbol) {
+            let s = (symbol || 'BTCUSD').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+            if (s.endsWith('USD')) {
+                return `BINANCE:${s}T`;
+            } else if (s.endsWith('USDT')) {
+                return `BINANCE:${s}`;
+            }
+            return `BINANCE:${s}USDT`;
+        }
+
+        function loadTradingViewWidget(symbol) {
+            const container = document.getElementById('tradingview_widget_container');
+            if (!container) return;
+            container.innerHTML = '';
+            
+            const cleanSym = (symbol || 'BTCUSD').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+            const tvSymbol = getTradingViewSymbol(cleanSym);
+
+            try {
+                if (typeof TradingView !== 'undefined') {
+                    new TradingView.widget({
+                        "autosize": true,
+                        "symbol": tvSymbol,
+                        "interval": "5",
+                        "timezone": "Asia/Kolkata",
+                        "theme": "dark",
+                        "style": "8", // 8 = Heikin Ashi Candlesticks
+                        "locale": "en",
+                        "toolbar_bg": "#111622",
+                        "enable_publishing": false,
+                        "hide_side_toolbar": false,
+                        "allow_symbol_change": true,
+                        "container_id": "tradingview_widget_container",
+                        "studies": [
+                            "STD;EMA",
+                            "STD;EMA"
+                        ],
+                        "overrides": {
+                            "mainSeriesProperties.style": 8,
+                            "paneProperties.background": "#080b11",
+                            "paneProperties.vertGridProperties.color": "rgba(31, 41, 61, 0.4)",
+                            "paneProperties.horzGridProperties.color": "rgba(31, 41, 61, 0.4)"
+                        }
+                    });
+                } else {
+                    container.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full p-8 text-center text-gray-400">
+                            <i class="fa-solid fa-globe text-3xl text-blue-400 mb-3 animate-pulse"></i>
+                            <p class="text-sm font-semibold mb-3">Live Terminal for ${symbol} on Delta Exchange</p>
+                            <button onclick="openDeltaChart('${symbol}', event)" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-lg transition">
+                                Open ${symbol} on Delta Exchange ↗
+                            </button>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                console.error("TradingView widget load error:", e);
+            }
+        }
+
+        async function fetchCanvasCandles(symbol) {
+            document.getElementById('modalChartMeta').innerText = `Calculating 5m Heikin Ashi candles & 200/20 EMA for ${symbol}...`;
             try {
                 const res = await fetch(`/api/candles/${symbol}?resolution=5m&lookback_days=2`);
                 const data = await res.json();
@@ -1216,6 +1380,14 @@
             } catch (err) {
                 document.getElementById('modalChartMeta').innerText = `Failed to load chart: ${err}`;
             }
+        }
+
+        async function openChartModal(symbol) {
+            currentModalSymbol = symbol || 'BTCUSD';
+            document.getElementById('chartModal').classList.remove('hidden');
+            document.getElementById('modalChartSymbol').innerText = currentModalSymbol;
+            document.getElementById('modalChartMeta').innerText = `5m Heikin Ashi + 200/20 EMA Chart for ${currentModalSymbol}`;
+            switchChartTab(currentChartTab || 'tv');
         }
 
         function renderInteractiveChart(symbol, candles) {
@@ -1247,7 +1419,7 @@
                             pointRadius: 0
                         },
                         {
-                            label: '20 EMA (Pullback)',
+                            label: '20 EMA (Pullback Trigger)',
                             data: ema20Values,
                             borderColor: '#06b6d4',
                             borderWidth: 2,
@@ -1283,6 +1455,8 @@
                 modalChartInstance.destroy();
                 modalChartInstance = null;
             }
+            const container = document.getElementById('tradingview_widget_container');
+            if (container) container.innerHTML = '';
         }
 
         async function openBalanceModal() {
