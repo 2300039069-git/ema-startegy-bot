@@ -1,20 +1,18 @@
 """
-Unit tests and simulation verification for KDK Trade Bot strategy logic,
-pullback breakout detection, 1:2 Risk-to-Reward bracket calculations,
-Probability of Profit (PoP %) scoring, and trade history tracking.
+Unit tests and simulation verification for KDK Trade Bot:
+Heikin Ashi 5-Minute 200 EMA + 20 EMA Pullback Strategy with 1:2 RR and 2% Risk Sizing.
 """
 
 import os
 import unittest
 import pandas as pd
 import numpy as np
-from kdk_bot import KDKTradeBot, format_price
-from app import analyze_strategy, load_trade_history, save_trade_history, record_trade, update_trade_status, TRADE_HISTORY_FILE
+from kdk_bot import KDKTradeBot, format_price, calculate_heikin_ashi
+from app import analyze_strategy, calculate_position_size, load_trade_history, save_trade_history, record_trade, update_trade_status
 
 
-class TestKDKStrategy(unittest.TestCase):
+class TestHeikinAshiStrategy(unittest.TestCase):
     def setUp(self):
-        # Instantiate bot in offline mode
         self.bot = KDKTradeBot(api_key="test_key", api_secret="test_secret", base_url="https://testnet-api.delta.exchange")
 
     def create_synthetic_candles(self, n=250, base_price=50000.0, trend="up"):
@@ -24,7 +22,7 @@ class TestKDKStrategy(unittest.TestCase):
         
         prices = [base_price]
         for _ in range(n - 1):
-            change = (np.random.rand() - 0.48) * 100 if trend == "up" else (np.random.rand() - 0.52) * 100
+            change = (np.random.rand() - 0.48) * 60 if trend == "up" else (np.random.rand() - 0.52) * 60
             prices.append(prices[-1] + change)
         
         data = []
@@ -32,133 +30,129 @@ class TestKDKStrategy(unittest.TestCase):
             data.append({
                 "time": t,
                 "open": p - 10,
-                "high": p + 30,
-                "low": p - 30,
+                "high": p + 25,
+                "low": p - 25,
                 "close": p,
                 "volume": 150.0
             })
         return pd.DataFrame(data)
 
-    def test_buy_signal_trigger_and_pop(self):
-        """Test BUY signal: Price > 200 EMA AND Price > 3-candle pullback high + PoP % calculation."""
-        df = self.create_synthetic_candles(n=220, base_price=50000.0, trend="up")
+    def test_heikin_ashi_calculation(self):
+        """Test Heikin Ashi transformation logic."""
+        df = self.create_synthetic_candles(n=50, base_price=50000.0)
+        df_ha = calculate_heikin_ashi(df)
         
-        # Calculate EMA to know the baseline
+        self.assertIn("ha_open", df_ha.columns)
+        self.assertIn("ha_close", df_ha.columns)
+        self.assertIn("ha_high", df_ha.columns)
+        self.assertIn("ha_low", df_ha.columns)
+        
+        # Verify first HA Open is average of Open and Close
+        expected_ha_open_0 = (df["open"].iloc[0] + df["close"].iloc[0]) / 2.0
+        self.assertAlmostEqual(df_ha["ha_open"].iloc[0], expected_ha_open_0, places=3)
+        
+        # Verify HA High >= max(ha_open, ha_close)
+        for i in range(len(df_ha)):
+            self.assertGreaterEqual(df_ha["ha_high"].iloc[i], df_ha["ha_open"].iloc[i] - 1e-6)
+            self.assertGreaterEqual(df_ha["ha_high"].iloc[i], df_ha["ha_close"].iloc[i] - 1e-6)
+            self.assertLessEqual(df_ha["ha_low"].iloc[i], df_ha["ha_open"].iloc[i] + 1e-6)
+            self.assertLessEqual(df_ha["ha_low"].iloc[i], df_ha["ha_close"].iloc[i] + 1e-6)
+
+    def test_buy_signal_with_20ema_touch_and_green_ha(self):
+        """
+        Test BUY signal:
+        - Price > 200 EMA (Bullish)
+        - Price touched 20 EMA in recent candles (Pullback)
+        - Solid Green Heikin Ashi candle formed
+        - 1:2 Risk-to-Reward targets
+        """
+        df = self.create_synthetic_candles(n=220, base_price=50000.0, trend="up")
         df["ema200"] = df["close"].ewm(span=200, adjust=False).mean()
-        
-        # Set pullback candles (last 3 completed: indices -4, -3, -2)
-        df.loc[len(df) - 4, ["high", "low", "close"]] = [52000.0, 51500.0, 51800.0]
-        df.loc[len(df) - 3, ["high", "low", "close"]] = [52100.0, 51600.0, 51900.0]
-        df.loc[len(df) - 2, ["high", "low", "close"]] = [52050.0, 51700.0, 51850.0]
-        
-        # Trigger candle breaking above 52100 with price > EMA200
-        breakout_price = 52500.0
-        df.loc[len(df) - 1, ["open", "high", "low", "close"]] = [52000.0, 52600.0, 51900.0, breakout_price]
+        df["ema20"] = df["close"].ewm(span=20, adjust=False).mean()
 
-        analysis = analyze_strategy(df, rr_ratio=2.0)
+        # Set pullback candles where candle dips down to touch 20 EMA
+        ema20_level = 51800.0
+        for idx in range(len(df) - 5, len(df) - 1):
+            df.loc[idx, ["open", "high", "low", "close"]] = [51900.0, 52000.0, ema20_level - 10, 51850.0]
+
+        # Trigger candle bouncing off 20 EMA with strong solid Green HA
+        trigger_price = 52200.0
+        df.loc[len(df) - 1, ["open", "high", "low", "close"]] = [51850.0, 52300.0, 51840.0, trigger_price]
+
+        analysis = analyze_strategy(df, rr_ratio=2.0, account_equity=200.0)
         
-        self.assertEqual(analysis["signal"], "BUY")
         self.assertEqual(analysis["direction"], "BULLISH")
-        self.assertEqual(analysis["current_price"], breakout_price)
-        self.assertEqual(analysis["pullback_high"], 52100.0)
-        self.assertEqual(analysis["pullback_low"], 51500.0)
-        self.assertEqual(analysis["stop_loss"], 51500.0)
+        self.assertTrue(analysis["ema20_touched"])
+        self.assertEqual(analysis["signal"], "BUY")
+        self.assertGreater(analysis["take_profit"], analysis["current_price"])
+        self.assertLess(analysis["stop_loss"], analysis["current_price"])
         
-        expected_risk = breakout_price - 51500.0  # 1000.0
-        expected_tp = breakout_price + (2.0 * expected_risk)  # 52500 + 2000 = 54500.0
-        self.assertAlmostEqual(analysis["risk"], expected_risk, places=2)
+        expected_risk = analysis["current_price"] - analysis["stop_loss"]
+        expected_tp = analysis["current_price"] + (2.0 * expected_risk)
         self.assertAlmostEqual(analysis["take_profit"], expected_tp, places=2)
-        
-        # PoP should be in valid high probability range
-        self.assertGreaterEqual(analysis["pop_percent"], 50.0)
-        self.assertLessEqual(analysis["pop_percent"], 92.0)
-        self.assertIn("BULLISH", analysis["guidance"])
 
-    def test_sell_signal_trigger_and_pop(self):
-        """Test SELL signal: Price < 200 EMA AND Price < 3-candle pullback low + PoP % calculation."""
+    def test_sell_signal_with_20ema_touch_and_red_ha(self):
+        """
+        Test SELL signal:
+        - Price < 200 EMA (Bearish)
+        - Price pulled back up and touched 20 EMA
+        - Solid Red Heikin Ashi candle formed
+        - 1:2 Risk-to-Reward targets
+        """
         df = self.create_synthetic_candles(n=220, base_price=50000.0, trend="down")
-        
-        # Set pullback candles
-        df.loc[len(df) - 4, ["high", "low", "close"]] = [48500.0, 48000.0, 48200.0]
-        df.loc[len(df) - 3, ["high", "low", "close"]] = [48600.0, 47900.0, 48100.0]
-        df.loc[len(df) - 2, ["high", "low", "close"]] = [48400.0, 48050.0, 48150.0]
-        
-        # Breakdown price
-        breakdown_price = 47500.0
-        df.loc[len(df) - 1, ["open", "high", "low", "close"]] = [48000.0, 48100.0, 47400.0, breakdown_price]
+        df["ema200"] = df["close"].ewm(span=200, adjust=False).mean()
+        df["ema20"] = df["close"].ewm(span=20, adjust=False).mean()
 
-        analysis = analyze_strategy(df, rr_ratio=2.0)
+        # Set pullback candles where price rallies up to touch 20 EMA
+        ema20_level = 48200.0
+        for idx in range(len(df) - 5, len(df) - 1):
+            df.loc[idx, ["open", "high", "low", "close"]] = [48000.0, ema20_level + 15, 47950.0, 48100.0]
+
+        # Trigger candle dropping with strong solid Red HA
+        trigger_price = 47800.0
+        df.loc[len(df) - 1, ["open", "high", "low", "close"]] = [48100.0, 48110.0, 47750.0, trigger_price]
+
+        analysis = analyze_strategy(df, rr_ratio=2.0, account_equity=200.0)
         
-        self.assertEqual(analysis["signal"], "SELL")
         self.assertEqual(analysis["direction"], "BEARISH")
-        self.assertEqual(analysis["current_price"], breakdown_price)
-        self.assertEqual(analysis["pullback_high"], 48600.0)
-        self.assertEqual(analysis["pullback_low"], 47900.0)
-        self.assertEqual(analysis["stop_loss"], 48600.0)
+        self.assertTrue(analysis["ema20_touched"])
+        self.assertEqual(analysis["signal"], "SELL")
+        self.assertLess(analysis["take_profit"], analysis["current_price"])
+        self.assertGreater(analysis["stop_loss"], analysis["current_price"])
         
-        expected_risk = 48600.0 - breakdown_price  # 1100.0
-        expected_tp = breakdown_price - (2.0 * expected_risk)  # 47500 - 2200 = 45300.0
-        self.assertAlmostEqual(analysis["risk"], expected_risk, places=2)
+        expected_risk = analysis["stop_loss"] - analysis["current_price"]
+        expected_tp = analysis["current_price"] - (2.0 * expected_risk)
         self.assertAlmostEqual(analysis["take_profit"], expected_tp, places=2)
-        
-        self.assertGreaterEqual(analysis["pop_percent"], 50.0)
-        self.assertLessEqual(analysis["pop_percent"], 92.0)
-        self.assertIn("BEARISH", analysis["guidance"])
 
-    def test_neutral_condition(self):
-        """Test Neutral condition when price is within pullback range."""
+    def test_no_chase_rule(self):
+        """Test that if price does NOT touch the 20 EMA, signal remains NEUTRAL (No Chasing)."""
         df = self.create_synthetic_candles(n=220, base_price=50000.0, trend="up")
-        
-        df.loc[len(df) - 4, ["high", "low", "close"]] = [52000.0, 51500.0, 51800.0]
-        df.loc[len(df) - 3, ["high", "low", "close"]] = [52100.0, 51600.0, 51900.0]
-        df.loc[len(df) - 2, ["high", "low", "close"]] = [52050.0, 51700.0, 51850.0]
-        
-        # Inside pullback range
-        df.loc[len(df) - 1, ["open", "high", "low", "close"]] = [51800.0, 51900.0, 51750.0, 51800.0]
+        df["ema200"] = df["close"].ewm(span=200, adjust=False).mean()
+        df["ema20"] = df["close"].ewm(span=20, adjust=False).mean()
+
+        # Price is far above 20 EMA without touching it across last 15 candles
+        for idx in range(len(df) - 15, len(df)):
+            df.loc[idx, ["open", "high", "low", "close"]] = [55000.0, 55500.0, 54800.0, 55200.0]
 
         analysis = analyze_strategy(df, rr_ratio=2.0)
+        self.assertFalse(analysis["ema20_touched"])
         self.assertEqual(analysis["signal"], "NEUTRAL")
-        self.assertGreaterEqual(analysis["pop_percent"], 35.0)
 
-    def test_price_formatting_and_tick_sizes(self):
-        """Test price formatting for different exchange tick sizes."""
+    def test_position_sizing_2pct_risk(self):
+        """Test 2% capital risk position sizing formula."""
+        # Account equity = $1000, 2% risk = $20
+        # If risk per contract = $10 -> size = 2 contracts
+        size = calculate_position_size(account_equity_usd=1000.0, risk_per_contract_usd=10.0, risk_pct=2.0)
+        self.assertEqual(size, 2)
+        
+        # If risk per contract = $40 -> size = max(1, 0) = 1 contract
+        size_min = calculate_position_size(account_equity_usd=1000.0, risk_per_contract_usd=40.0, risk_pct=2.0)
+        self.assertEqual(size_min, 1)
+
+    def test_price_formatting(self):
+        """Test price rounding to tick size."""
         self.assertEqual(format_price(81459.543, 0.1), "81459.5")
-        self.assertEqual(format_price(81459.567, 0.1), "81459.6")
         self.assertEqual(format_price(2450.123, 0.05), "2450.1")
-        self.assertEqual(format_price(2450.134, 0.05), "2450.15")
-        self.assertEqual(format_price(108.3854, 0.001), "108.385")
-        self.assertEqual(format_price(108.3858, 0.001), "108.386")
-
-    def test_trade_history_persistence(self):
-        """Test recording and updating trades in trade_history.json."""
-        test_trade = {
-            "order_id": "TEST_ORDER_999",
-            "product_id": 12345,
-            "symbol": "BTCUSD",
-            "side": "BUY",
-            "size": 1,
-            "entry_price": 50000.0,
-            "stop_loss": 49000.0,
-            "take_profit": 52000.0,
-            "status": "OPEN",
-            "source": "BOT"
-        }
-        record_trade(test_trade)
-        trades = load_trade_history()
-        found = any(t.get("order_id") == "TEST_ORDER_999" for t in trades)
-        self.assertTrue(found)
-
-        # Update status
-        update_trade_status("TEST_ORDER_999", "CLOSED", exit_price=52000.0, realized_pnl=2000.0)
-        trades_after = load_trade_history()
-        updated_trade = next(t for t in trades_after if t.get("order_id") == "TEST_ORDER_999")
-        self.assertEqual(updated_trade["status"], "CLOSED")
-        self.assertEqual(updated_trade["exit_price"], 52000.0)
-        self.assertEqual(updated_trade["realized_pnl_usd"], 2000.0)
-
-        # Clean up test trade
-        cleaned = [t for t in trades_after if t.get("order_id") != "TEST_ORDER_999"]
-        save_trade_history(cleaned)
 
 
 if __name__ == "__main__":

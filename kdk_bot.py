@@ -1,25 +1,23 @@
 #!/usr/bin/env python3
 """
 ================================================================================
-                           KDK TRADE BOT (v2.5)
-             All-Futures 200 EMA + 50 EMA Strategy with 1:2 RR
-          Multi-Indicator Probability of Profit (PoP %) Engine
+                           KDK TRADE BOT (v3.0)
+         Heikin Ashi 5m 200 EMA + 20 EMA Pullback Strategy Engine
                       Target: Delta Exchange Testnet
 ================================================================================
 Strategy Overview:
-- Automatically discovers & scans ALL Perpetual Futures on Delta Exchange.
-- Timeframe: 5-minute candles.
-- 200 EMA + 50 EMA trend filtering on close prices using pandas.
-- Multi-indicator Probability of Profit (PoP %) Engine (RSI 14, ATR 14, Volume).
-- Actionable Directional Guidance (BULLISH / BEARISH / NEUTRAL).
-- Triggers:
-    * BUY  : Current Price > 200 EMA AND breaks above 3-candle pullback high.
-    * SELL : Current Price < 200 EMA AND breaks below 3-candle pullback low.
+- Timeframe: 5-minute candles (5m).
+- Chart Type: Heikin Ashi (HA) Candles.
+- Indicator 1: 200 EMA (Trend Filter: Price > 200 EMA = Long / Price < 200 EMA = Short).
+- Indicator 2: 20 EMA (Pullback line: Price must touch 20 EMA before entering).
+- Entry Rules:
+    * BUY  : Price > 200 EMA + 20 EMA pullback touch + Solid GREEN Heikin Ashi candle
+    * SELL : Price < 200 EMA + 20 EMA pullback touch + Solid RED Heikin Ashi candle
 - Risk Management:
-    * Max active positions across all monitored assets: 2
-    * Market orders with server-side bracket orders attached directly
-    * Stop Loss at recent swing low (Buy) or swing high (Sell)
-    * Take Profit with strict 1:2 Risk-to-Reward ratio
+    * Stop Loss: Swing low/high of recent 1-3 pullback candles
+    * Take Profit: Strict 1:2 Risk-to-Reward Ratio
+    * Position Sizing: 2% maximum capital risk per trade
+    * Max 2 concurrent open positions
 ================================================================================
 """
 
@@ -30,6 +28,7 @@ import argparse
 import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import numpy as np
 import requests
 import pandas as pd
 from dotenv import load_dotenv
@@ -54,6 +53,7 @@ POLL_INTERVAL = int(os.getenv("POLL_INTERVAL_SECONDS", "60"))
 RATE_LIMIT_PAUSE = float(os.getenv("RATE_LIMIT_PAUSE", "0.2"))
 DEFAULT_ORDER_SIZE = int(os.getenv("DEFAULT_ORDER_SIZE", "1"))
 RISK_REWARD_RATIO = float(os.getenv("RISK_REWARD_RATIO", "2.0"))
+RISK_PER_TRADE_PCT = float(os.getenv("RISK_PER_TRADE_PCT", "2.0"))
 USD_INR_RATE = 85.0
 
 
@@ -83,6 +83,33 @@ def format_price(price: float, tick_size: float = 0.01) -> str:
         return str(round(price, 4))
 
 
+def calculate_heikin_ashi(df: pd.DataFrame) -> pd.DataFrame:
+    """Computes Heikin Ashi OHLC candles from standard OHLC dataframe."""
+    df_ha = df.copy()
+    if len(df_ha) == 0:
+        return df_ha
+
+    ha_close = (df_ha["open"] + df_ha["high"] + df_ha["low"] + df_ha["close"]) / 4.0
+    
+    ha_open = np.zeros(len(df_ha))
+    ha_open[0] = (df_ha["open"].iloc[0] + df_ha["close"].iloc[0]) / 2.0
+    for i in range(1, len(df_ha)):
+        ha_open[i] = (ha_open[i - 1] + ha_close.iloc[i - 1]) / 2.0
+    
+    df_ha["ha_open"] = ha_open
+    df_ha["ha_close"] = ha_close.values
+    df_ha["ha_high"] = np.maximum(df_ha["high"], np.maximum(df_ha["ha_open"], df_ha["ha_close"]))
+    df_ha["ha_low"] = np.minimum(df_ha["low"], np.minimum(df_ha["ha_open"], df_ha["ha_close"]))
+    
+    body_size = (df_ha["ha_close"] - df_ha["ha_open"]).abs()
+    candle_range = (df_ha["ha_high"] - df_ha["ha_low"]).replace(0, 1e-9)
+    df_ha["ha_is_green"] = df_ha["ha_close"] > df_ha["ha_open"]
+    df_ha["ha_is_red"] = df_ha["ha_close"] < df_ha["ha_open"]
+    df_ha["ha_is_doji"] = (body_size / candle_range) < 0.15
+
+    return df_ha
+
+
 class KDKTradeBot:
     def __init__(self, api_key: str, api_secret: str, base_url: str):
         self.api_key = api_key
@@ -95,6 +122,7 @@ class KDKTradeBot:
             raise_for_status=False
         )
         self.futures_products = {}
+        self.total_account_equity_usd = 189.42
         self.initialize_products()
 
     def initialize_products(self):
@@ -119,7 +147,6 @@ class KDKTradeBot:
                 prod_id = p.get("id")
                 tick_size = float(p.get("tick_size", "0.01"))
                 min_size = float(p.get("min_size", "1"))
-                order_size = max(DEFAULT_ORDER_SIZE, int(min_size))
 
                 futures_map[symbol] = {
                     "product_id": prod_id,
@@ -127,7 +154,7 @@ class KDKTradeBot:
                     "contract_type": contract_type,
                     "tick_size": tick_size,
                     "min_size": min_size,
-                    "order_size": order_size,
+                    "order_size": max(DEFAULT_ORDER_SIZE, int(min_size)),
                     "underlying": p.get("underlying_asset", {}).get("symbol", symbol)
                 }
 
@@ -154,7 +181,7 @@ class KDKTradeBot:
             return []
 
     def fetch_candles(self, symbol: str, resolution: str = "5m", lookback_days: int = 3) -> pd.DataFrame:
-        """Fetches historical candles for 200 EMA calculation."""
+        """Fetches historical candles for 200 EMA and 20 EMA calculation."""
         now = int(time.time())
         start_time = now - (lookback_days * 86400)
         end_time = now
@@ -197,16 +224,14 @@ class KDKTradeBot:
         return df
 
     def analyze_strategy(self, df: pd.DataFrame, rr_ratio: float = RISK_REWARD_RATIO) -> dict:
-        """Computes 200 EMA, 50 EMA, RSI, ATR, PoP %, and 3-candle pullback breakout levels with 1:2 RR."""
+        """Computes Heikin Ashi 5m 200 EMA + 20 EMA strategy metrics."""
         if len(df) < 205:
             return {
                 "signal": "INSUFFICIENT_DATA",
                 "reason": f"Need at least 205 candles, got {len(df)}",
                 "current_price": 0.0,
                 "ema200": 0.0,
-                "ema50": 0.0,
-                "pullback_high": 0.0,
-                "pullback_low": 0.0,
+                "ema20": 0.0,
                 "trend": "N/A",
                 "pop_percent": 50.0,
                 "confidence": "LOW",
@@ -215,103 +240,106 @@ class KDKTradeBot:
             }
 
         df["ema200"] = df["close"].ewm(span=200, adjust=False).mean()
-        df["ema50"] = df["close"].ewm(span=50, adjust=False).mean()
+        df["ema20"] = df["close"].ewm(span=20, adjust=False).mean()
 
-        current_candle = df.iloc[-1]
-        current_price = float(current_candle["close"])
-        current_ema200 = float(current_candle["ema200"])
-        current_ema50 = float(current_candle["ema50"])
+        df_ha = calculate_heikin_ashi(df)
+        latest = df_ha.iloc[-1]
+        current_price = float(latest["close"])
+        current_ema200 = float(latest["ema200"])
+        current_ema20 = float(latest["ema20"])
 
-        pullback_candles = df.iloc[-4:-1]
-        pullback_high = float(pullback_candles["high"].max())
-        pullback_low = float(pullback_candles["low"].min())
+        ha_is_green = bool(latest["ha_is_green"])
+        ha_is_red = bool(latest["ha_is_red"])
+        ha_is_doji = bool(latest["ha_is_doji"])
+
+        is_bullish_trend = current_price > current_ema200
+        is_bearish_trend = current_price < current_ema200
+
+        # Pullback to 20 EMA across past 1-5 candles
+        lookback_candles = df_ha.iloc[-6:-1]
+        bull_ema20_touch = any(
+            (c["low"] <= c["ema20"] * 1.002 and c["high"] >= c["ema20"] * 0.998)
+            for _, c in lookback_candles.iterrows()
+        )
+        bear_ema20_touch = any(
+            (c["high"] >= c["ema20"] * 0.998 and c["low"] <= c["ema20"] * 1.002)
+            for _, c in lookback_candles.iterrows()
+        )
+
+        recent_3 = df_ha.iloc[-4:-1]
+        swing_low = float(recent_3["low"].min())
+        swing_high = float(recent_3["high"].max())
 
         signal = "NEUTRAL"
         stop_loss = 0.0
         take_profit = 0.0
         risk = 0.0
+        ema20_touched = False
 
-        if current_price > current_ema200 and current_price > pullback_high:
-            signal = "BUY"
-            stop_loss = pullback_low
+        if is_bullish_trend:
+            direction = "BULLISH"
+            ema20_touched = bull_ema20_touch
+            stop_loss = swing_low
             risk = current_price - stop_loss
-            if risk > 0:
-                take_profit = current_price + (rr_ratio * risk)
-            else:
-                signal = "NEUTRAL"
+            if risk <= 0:
+                risk = current_price * 0.005
+                stop_loss = current_price - risk
+            take_profit = current_price + (rr_ratio * risk)
 
-        elif current_price < current_ema200 and current_price < pullback_low:
-            signal = "SELL"
-            stop_loss = pullback_high
+            if bull_ema20_touch and ha_is_green and not ha_is_doji:
+                signal = "BUY"
+
+        else:
+            direction = "BEARISH"
+            ema20_touched = bear_ema20_touch
+            stop_loss = swing_high
             risk = stop_loss - current_price
-            if risk > 0:
-                take_profit = current_price - (rr_ratio * risk)
-            else:
-                signal = "NEUTRAL"
+            if risk <= 0:
+                risk = current_price * 0.005
+                stop_loss = current_price + risk
+            take_profit = current_price - (rr_ratio * risk)
 
-        # RSI(14)
-        delta = df["close"].diff()
-        gain = (delta.where(delta > 0, 0.0)).rolling(window=14, min_periods=1).mean()
-        loss = (-delta.where(delta < 0, 0.0)).rolling(window=14, min_periods=1).mean()
-        rs = gain / (loss + 1e-9)
-        rsi_series = 100 - (100 / (1 + rs))
-        rsi14 = float(rsi_series.iloc[-1]) if not rsi_series.empty else 50.0
+            if bear_ema20_touch and ha_is_red and not ha_is_doji:
+                signal = "SELL"
 
-        # ATR(14)
-        high_low = df["high"] - df["low"]
-        high_close = (df["high"] - df["close"].shift()).abs()
-        low_close = (df["low"] - df["close"].shift()).abs()
-        tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-        atr_series = tr.rolling(14, min_periods=1).mean()
-        atr14 = float(atr_series.iloc[-1]) if not atr_series.empty else (current_price * 0.005)
-
-        # Directional determination & PoP %
-        is_bull_trend = current_price > current_ema200
-        direction = "BULLISH" if is_bull_trend else "BEARISH"
-        
         pop_score = 40.0
-        if is_bull_trend and current_price > current_ema50:
+        if (direction == "BULLISH" and current_price > current_ema200) or (direction == "BEARISH" and current_price < current_ema200):
             pop_score += 20.0
-        elif not is_bull_trend and current_price < current_ema50:
+        if ema20_touched:
             pop_score += 20.0
-        else:
-            pop_score += 10.0
-
-        if direction == "BULLISH" and 48 <= rsi14 <= 68:
-            pop_score += 20.0
-        elif direction == "BEARISH" and 32 <= rsi14 <= 52:
-            pop_score += 20.0
-        else:
-            pop_score += 10.0
-
-        if signal in ["BUY", "SELL"]:
+        if (direction == "BULLISH" and ha_is_green and not ha_is_doji) or (direction == "BEARISH" and ha_is_red and not ha_is_doji):
             pop_score += 15.0
+        elif ha_is_doji:
+            pop_score -= 10.0
+        if signal in ["BUY", "SELL"]:
+            pop_score += 10.0
 
         pop_percent = round(max(35.0, min(92.0, pop_score)), 1)
         confidence = "HIGH PROBABILITY" if pop_percent >= 70 else ("MODERATE PROBABILITY" if pop_percent >= 55 else "LOW PROBABILITY")
 
-        sl_calc = pullback_low if direction == "BULLISH" else pullback_high
-        risk_calc = max(abs(current_price - sl_calc), atr14 * 0.5)
-        tp_calc = (current_price + rr_ratio * risk_calc) if direction == "BULLISH" else (current_price - rr_ratio * risk_calc)
+        # 2% Capital Risk Sizing
+        max_risk_usd = self.total_account_equity_usd * (RISK_PER_TRADE_PCT / 100.0)
+        rec_size = max(1, int(max_risk_usd / (risk if risk > 0 else 1.0)))
 
         return {
             "signal": signal,
             "current_price": current_price,
             "current_price_inr": round(current_price * USD_INR_RATE, 2),
             "ema200": current_ema200,
-            "ema50": current_ema50,
-            "pullback_high": pullback_high,
-            "pullback_low": pullback_low,
-            "stop_loss": stop_loss if signal in ["BUY", "SELL"] else round(sl_calc, 4),
-            "take_profit": take_profit if signal in ["BUY", "SELL"] else round(tp_calc, 4),
-            "risk": risk if risk > 0 else risk_calc,
+            "ema20": current_ema20,
+            "stop_loss": round(stop_loss, 4),
+            "take_profit": round(take_profit, 4),
+            "risk": round(risk, 4),
             "rr_ratio": rr_ratio,
-            "trend": "BULLISH (Above 200 EMA)" if current_price > current_ema200 else "BEARISH (Below 200 EMA)",
+            "trend": "BULLISH (Above 200 EMA)" if is_bullish_trend else "BEARISH (Below 200 EMA)",
+            "direction": direction,
             "pop_percent": pop_percent,
             "confidence": confidence,
-            "direction": direction,
-            "rsi14": round(rsi14, 1),
-            "atr14": round(atr14, 4),
+            "ema20_touched": ema20_touched,
+            "ha_is_green": ha_is_green,
+            "ha_is_red": ha_is_red,
+            "ha_is_doji": ha_is_doji,
+            "recommended_size": rec_size,
         }
 
     def place_bracket_market_order(self, product_id: int, symbol: str, side: str, size: int, sl_price: float, tp_price: float, tick_size: float) -> dict:
@@ -328,7 +356,7 @@ class KDKTradeBot:
             "bracket_take_profit_price": str(formatted_tp),
         }
 
-        log(f"Submitting {side.upper()} order for {symbol} (Product ID: {product_id}) | Size: {size} contracts", "TRADE")
+        log(f"Submitting {side.upper()} order for {symbol} (Product ID: {product_id}) | Size: {size} contracts (2% Risk Sizing)", "TRADE")
         log(f"Attached Server-Side Brackets -> Stop Loss: {formatted_sl} | Take Profit: {formatted_tp} (1:2 RR)", "TRADE")
 
         try:
@@ -350,7 +378,7 @@ class KDKTradeBot:
     def run_scan_cycle(self):
         """Executes one scan cycle across all discovered futures assets."""
         print("\n" + "=" * 85)
-        log(f"Initiating Comprehensive Market Scan ({len(self.futures_products)} Futures Contracts)...", "INFO")
+        log(f"Initiating Heikin Ashi 200/20 EMA Scan ({len(self.futures_products)} Futures Contracts)...", "INFO")
         print("=" * 85)
 
         open_positions = self.get_open_positions()
@@ -362,7 +390,6 @@ class KDKTradeBot:
         for symbol, meta in self.futures_products.items():
             product_id = meta.get("product_id")
             tick_size = meta.get("tick_size", 0.01)
-            order_size = meta.get("order_size", DEFAULT_ORDER_SIZE)
 
             df = self.fetch_candles(symbol=symbol, resolution="5m", lookback_days=3)
             if df.empty or len(df) < 205:
@@ -370,12 +397,14 @@ class KDKTradeBot:
 
             analysis = self.analyze_strategy(df, rr_ratio=RISK_REWARD_RATIO)
             curr = analysis["current_price"]
-            ema = analysis["ema200"]
+            ema200 = analysis["ema200"]
+            ema20 = analysis["ema20"]
             sig = analysis["signal"]
             pop = analysis["pop_percent"]
             dir_bias = analysis["direction"]
+            order_size = analysis.get("recommended_size", meta.get("order_size", DEFAULT_ORDER_SIZE))
 
-            log(f"[{symbol:<10}] Price: ${curr:<9.4f} | 200 EMA: ${ema:<9.4f} | Bias: {dir_bias:<7} | PoP: {pop:>4.1f}% | Signal: {sig}", "INFO")
+            log(f"[{symbol:<10}] Price: ${curr:<9.4f} | 200 EMA: ${ema200:<8.2f} | 20 EMA: ${ema20:<8.2f} | Bias: {dir_bias:<7} | PoP: {pop:>4.1f}% | Signal: {sig}", "INFO")
 
             if sig in ["BUY", "SELL"]:
                 if product_id in open_product_ids:
@@ -385,7 +414,7 @@ class KDKTradeBot:
                 else:
                     sl = analysis["stop_loss"]
                     tp = analysis["take_profit"]
-                    log(f"🚨 VALID {sig} TRIGGER! Entry: ${curr:.4f} | SL: ${sl:.4f} | TP: ${tp:.4f} (1:2 RR) | PoP: {pop}%", "SIGNAL")
+                    log(f"🚨 VALID HEIKIN ASHI {sig} TRIGGER! Entry: ${curr:.4f} | SL: ${sl:.4f} | TP: ${tp:.4f} (1:2 RR) | PoP: {pop}% | Size: {order_size}", "SIGNAL")
                     side = "buy" if sig == "BUY" else "sell"
                     res = self.place_bracket_market_order(
                         product_id=product_id,
@@ -412,7 +441,7 @@ class KDKTradeBot:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="KDK Trade Bot CLI")
+    parser = argparse.ArgumentParser(description="KDK Trade Bot CLI - Heikin Ashi 200/20 EMA")
     parser.add_argument("--scan-once", action="store_true", help="Execute single scan and exit")
     args = parser.parse_args()
 

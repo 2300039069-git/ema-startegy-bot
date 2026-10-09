@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KDK Trade Bot - All Futures Professional Terminal</title>
+    <title>KDK Trade Bot - Heikin Ashi 200/20 EMA Terminal</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -20,6 +20,8 @@
                         brandemerald: '#10b981',
                         brandrose: '#f43f5e',
                         brandpurple: '#8b5cf6',
+                        brandamber: '#f59e0b',
+                        brandcyan: '#06b6d4',
                     }
                 }
             }
@@ -67,7 +69,7 @@
 </head>
 <body class="text-gray-100 min-h-screen flex flex-col relative overflow-x-hidden">
 
-    <!-- Interactive Dynamic Trade Chart Background Canvas -->
+    <!-- Interactive Dynamic Heikin Ashi Chart Background Canvas -->
     <canvas id="chartBackgroundCanvas"></canvas>
 
     <div class="app-content flex flex-col min-h-screen">
@@ -76,17 +78,17 @@
         <header class="glass-panel sticky top-0 z-40 px-6 py-3 shadow-2xl border-b border-bordercolor">
             <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
                 
-                <!-- Branding -->
+                <!-- Branding & Strategy Tag -->
                 <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-                        <i class="fa-solid fa-bolt-lightning text-white text-xl"></i>
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-600 flex items-center justify-center shadow-lg shadow-emerald-500/25">
+                        <i class="fa-solid fa-chart-candlestick text-white text-xl"></i>
                     </div>
                     <div>
                         <div class="flex items-center space-x-2">
                             <h1 class="text-xl font-black tracking-tight text-white">KDK Trade Bot</h1>
-                            <span class="px-2 py-0.5 text-[11px] font-bold uppercase rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">All Futures Pro</span>
+                            <span class="px-2 py-0.5 text-[11px] font-bold uppercase rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Heikin Ashi 200/20 EMA</span>
                         </div>
-                        <p class="text-xs text-gray-400">200 EMA + Probability of Profit (PoP %) Engine | 1:2 RR</p>
+                        <p class="text-xs text-gray-400">5m Heikin Ashi + 200 EMA Trend + 20 EMA Pullback (1:2 RR | 2% Risk)</p>
                     </div>
                 </div>
 
@@ -148,7 +150,7 @@
                 </div>
 
                 <div class="glass-panel p-4 rounded-2xl shadow-md">
-                    <div class="text-xs text-gray-400 font-medium">Bot & Manual Positions</div>
+                    <div class="text-xs text-gray-400 font-medium">Active Trades / Limit</div>
                     <div class="text-2xl font-black mt-1 text-white flex items-center justify-between">
                         <span id="metricPositions">0 / 2</span>
                         <i class="fa-solid fa-shield-halved text-indigo-400 text-lg opacity-60"></i>
@@ -157,21 +159,21 @@
                 </div>
 
                 <div class="glass-panel p-4 rounded-2xl shadow-md">
-                    <div class="text-xs text-gray-400 font-medium">Monitored Futures Assets</div>
-                    <div class="text-2xl font-black mt-1 text-white flex items-center justify-between">
-                        <span id="metricTotalAssets">-- Futures</span>
-                        <i class="fa-solid fa-cubes text-blue-500 text-lg opacity-60"></i>
+                    <div class="text-xs text-gray-400 font-medium">Strategy & Timeframe</div>
+                    <div class="text-2xl font-black mt-1 text-cyan-400 flex items-center justify-between">
+                        <span>5m Heikin Ashi</span>
+                        <i class="fa-solid fa-chart-line text-cyan-400 text-lg opacity-60"></i>
                     </div>
-                    <div class="text-[11px] text-gray-400 mt-0.5">All Delta Perpetual Futures</div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">200 EMA + 20 EMA Pullback</div>
                 </div>
 
                 <div class="glass-panel p-4 rounded-2xl shadow-md">
-                    <div class="text-xs text-gray-400 font-medium">Strategy & Target RR</div>
+                    <div class="text-xs text-gray-400 font-medium">Risk Management</div>
                     <div class="text-2xl font-black mt-1 text-purple-400 flex items-center justify-between">
-                        <span>1 : 2 Strict</span>
-                        <i class="fa-solid fa-chart-line text-purple-400 text-lg opacity-60"></i>
+                        <span>1:2 RR | 2% Risk</span>
+                        <i class="fa-solid fa-scale-balanced text-purple-400 text-lg opacity-60"></i>
                     </div>
-                    <div class="text-[11px] text-gray-400 mt-0.5">PoP % Multi-Indicator Model</div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">Strict Capital Protection</div>
                 </div>
             </div>
 
@@ -189,7 +191,7 @@
                                 <h2 class="text-lg font-black text-white">Bot Placed Trades & Position Tracker</h2>
                                 <span id="activeTradesCountBadge" class="px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">0 Active</span>
                             </div>
-                            <p class="text-xs text-gray-400">Live positions placed autonomously by the bot & manual executions with INR PnL</p>
+                            <p class="text-xs text-gray-400">Live positions placed autonomously by the Heikin Ashi 200/20 EMA bot with INR PnL</p>
                         </div>
                     </div>
 
@@ -204,14 +206,14 @@
                     </div>
                 </div>
 
-                <!-- Active Positions Table Container -->
+                <!-- Active Positions Table -->
                 <div class="overflow-x-auto custom-scroll">
                     <table class="w-full text-left text-xs text-gray-300">
                         <thead class="bg-darkbg/90 uppercase text-[11px] text-gray-400 border-b border-bordercolor">
                             <tr>
                                 <th class="py-3 px-4">Asset</th>
                                 <th class="py-3 px-3">Side</th>
-                                <th class="py-3 px-3">Source</th>
+                                <th class="py-3 px-3">Strategy</th>
                                 <th class="py-3 px-3">Size</th>
                                 <th class="py-3 px-4">Entry Price</th>
                                 <th class="py-3 px-4">Mark Price</th>
@@ -225,8 +227,8 @@
                         <tbody id="activeTradesTableBody" class="divide-y divide-bordercolor/60">
                             <tr>
                                 <td colspan="11" class="py-8 text-center text-gray-400">
-                                    <i class="fa-solid fa-satellite-dish text-2xl text-indigo-400 mb-2 block"></i>
-                                    <span>No active open trades placed yet. The bot is continuously scanning all perpetual futures for 1:2 RR setups.</span>
+                                    <i class="fa-solid fa-satellite-dish text-2xl text-indigo-400 mb-2 block animate-pulse"></i>
+                                    <span>No active open trades placed yet. The bot is continuously scanning all perpetual futures for Heikin Ashi 20 EMA pullback setups.</span>
                                 </td>
                             </tr>
                         </tbody>
@@ -278,8 +280,8 @@
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div class="flex items-center space-x-2">
                         <h2 class="text-lg font-black text-white flex items-center space-x-2">
-                            <i class="fa-solid fa-chart-simple text-blue-400"></i>
-                            <span>All Futures Market Scanner & Probability Analyzer</span>
+                            <i class="fa-solid fa-chart-candlestick text-emerald-400"></i>
+                            <span>Heikin Ashi 200/20 EMA Futures Scanner</span>
                         </h2>
                         <span id="scanCountBadge" class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">0 Scanned</span>
                     </div>
@@ -292,28 +294,26 @@
 
                 <!-- Search & Filters Bar -->
                 <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-bordercolor/50">
-                    <!-- Search Input -->
                     <div class="relative flex-1 min-w-[240px]">
                         <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-2.5 text-gray-500 text-xs"></i>
                         <input type="text" id="searchAssetInput" onkeyup="filterAssets()" placeholder="Search asset (e.g. BTC, ETH, SOL, DOGE, XRP)..." class="w-full bg-darkbg border border-bordercolor rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:border-blue-500 outline-none">
                     </div>
 
-                    <!-- Filter Chips -->
                     <div class="flex items-center flex-wrap gap-2">
                         <button onclick="setFilter('ALL')" id="filterBtn-ALL" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition">All Assets</button>
-                        <button onclick="setFilter('HIGH_POP')" id="filterBtn-HIGH_POP" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-400 hover:text-white border border-bordercolor transition">🎯 High PoP (>70%)</button>
-                        <button onclick="setFilter('SIGNALS')" id="filterBtn-SIGNALS" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-400 hover:text-white border border-bordercolor transition">🚨 Active Signals (BUY/SELL)</button>
-                        <button onclick="setFilter('BULLISH')" id="filterBtn-BULLISH" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-400 hover:text-white border border-bordercolor transition">🟢 Bullish Bias</button>
-                        <button onclick="setFilter('BEARISH')" id="filterBtn-BEARISH" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-400 hover:text-white border border-bordercolor transition">🔴 Bearish Bias</button>
+                        <button onclick="setFilter('SIGNALS')" id="filterBtn-SIGNALS" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-400 hover:text-white border border-bordercolor transition">🚨 20 EMA Signals (BUY/SELL)</button>
+                        <button onclick="setFilter('TOUCHED')" id="filterBtn-TOUCHED" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-400 hover:text-white border border-bordercolor transition">🎯 20 EMA Touched</button>
+                        <button onclick="setFilter('BULLISH')" id="filterBtn-BULLISH" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-400 hover:text-white border border-bordercolor transition">🟢 Bullish (> 200 EMA)</button>
+                        <button onclick="setFilter('BEARISH')" id="filterBtn-BEARISH" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-400 hover:text-white border border-bordercolor transition">🔴 Bearish (< 200 EMA)</button>
                     </div>
                 </div>
             </div>
 
-            <!-- All Futures Grid Display with Probability of Profit and Direction Guidance -->
+            <!-- All Futures Grid Display -->
             <div id="futuresGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 <div class="col-span-full py-12 text-center text-gray-400 glass-panel rounded-2xl">
-                    <i class="fa-solid fa-spinner fa-spin text-3xl text-blue-500 mb-3"></i>
-                    <p class="text-sm font-semibold">Loading and scanning Perpetual Futures on Delta Exchange...</p>
+                    <i class="fa-solid fa-spinner fa-spin text-3xl text-emerald-500 mb-3"></i>
+                    <p class="text-sm font-semibold">Scanning 5m Heikin Ashi candles & 200/20 EMA across Delta Exchange...</p>
                 </div>
             </div>
 
@@ -339,27 +339,27 @@
                 </div>
                 
                 <div id="logTerminal" class="log-terminal bg-darkbg/90 p-4 rounded-xl font-mono text-xs text-gray-300 h-64 overflow-y-auto space-y-1.5 border border-bordercolor/60">
-                    <div class="text-gray-500 italic">Initializing live terminal feed...</div>
+                    <div class="text-gray-500 italic">Initializing Heikin Ashi terminal feed...</div>
                 </div>
             </div>
 
         </main>
     </div>
 
-    <!-- Interactive Trading Chart Modal -->
+    <!-- Interactive Heikin Ashi Trading Chart Modal -->
     <div id="chartModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="glass-panel border border-bordercolor w-full max-w-4xl rounded-3xl shadow-2xl p-6 relative flex flex-col max-h-[90vh]">
             <div class="flex items-center justify-between pb-3 mb-4 border-b border-bordercolor">
                 <div class="flex items-center space-x-3">
-                    <div class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
-                        <i class="fa-solid fa-chart-line"></i>
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-chart-candlestick"></i>
                     </div>
                     <div>
                         <h3 class="text-lg font-bold text-white flex items-center space-x-2">
                             <span id="modalChartSymbol">BTCUSD</span>
-                            <span class="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">5-Minute Candles</span>
+                            <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400">5m Heikin Ashi</span>
                         </h3>
-                        <p class="text-xs text-gray-400" id="modalChartMeta">200 EMA + 50 EMA + 1:2 RR Bracket Preview</p>
+                        <p class="text-xs text-gray-400" id="modalChartMeta">200 EMA (Amber) + 20 EMA (Cyan) + 1:2 RR Preview</p>
                     </div>
                 </div>
                 <button onclick="closeChartModal()" class="text-gray-400 hover:text-white text-xl px-2"><i class="fa-solid fa-xmark"></i></button>
@@ -371,22 +371,22 @@
 
             <div class="mt-4 pt-3 border-t border-bordercolor flex items-center justify-between text-xs text-gray-400">
                 <div class="flex items-center space-x-4">
-                    <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded bg-blue-500 inline-block"></span> <span>Price Close</span></span>
-                    <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded bg-amber-400 inline-block"></span> <span>200 EMA</span></span>
-                    <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded bg-purple-400 inline-block"></span> <span>50 EMA</span></span>
+                    <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span> <span>HA Close</span></span>
+                    <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded bg-cyan-400 inline-block"></span> <span>20 EMA (Pullback)</span></span>
+                    <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded bg-amber-400 inline-block"></span> <span>200 EMA (Trend)</span></span>
                 </div>
                 <button onclick="closeChartModal()" class="px-5 py-2 bg-gray-800 hover:bg-gray-700 text-white font-bold rounded-xl text-xs">Close Chart</button>
             </div>
         </div>
     </div>
 
-    <!-- Interactive Trade Setup Helper Modal -->
+    <!-- Interactive Heikin Ashi Trade Setup Helper Modal -->
     <div id="tradeHelperModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="glass-panel border border-bordercolor w-full max-w-lg rounded-3xl shadow-2xl p-6 relative">
             <div class="flex items-center justify-between pb-3 mb-4 border-b border-bordercolor">
                 <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-wand-magic-sparkles text-indigo-400 text-lg"></i>
-                    <h3 class="text-lg font-bold text-white">Manual 1:2 RR Trade Setup Helper</h3>
+                    <i class="fa-solid fa-wand-magic-sparkles text-emerald-400 text-lg"></i>
+                    <h3 class="text-lg font-bold text-white">Heikin Ashi 200/20 EMA Trade Helper</h3>
                 </div>
                 <button onclick="closeTradeHelperModal()" class="text-gray-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
             </div>
@@ -400,20 +400,20 @@
                     </div>
                     <div class="text-right">
                         <span id="helperDirectionBadge" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">BULLISH</span>
-                        <div class="text-[11px] text-gray-400 mt-1">PoP: <span id="helperPoP" class="font-bold text-emerald-400 font-mono">75%</span></div>
+                        <div class="text-[11px] text-gray-400 mt-1" id="helperHaStatus">🟢 Solid Green HA</div>
                     </div>
                 </div>
 
                 <!-- Strategy Direction & Calculated Levels -->
                 <div class="bg-darkbg/60 p-3.5 rounded-2xl border border-bordercolor/80 space-y-2.5">
                     <div class="font-bold text-gray-200 flex items-center justify-between">
-                        <span>Strategy 1:2 RR Plan:</span>
+                        <span>1:2 Risk-to-Reward Bracket Plan:</span>
                         <span class="text-purple-400 font-mono" id="helperRrBadge">1:2 Ratio</span>
                     </div>
 
                     <div class="grid grid-cols-2 gap-2 text-xs font-mono">
                         <div class="bg-darkbg p-2 rounded-xl border border-bordercolor">
-                            <span class="text-gray-400 block text-[10px]">RECOMMENDED STOP LOSS</span>
+                            <span class="text-gray-400 block text-[10px]">SWING STOP LOSS</span>
                             <span id="helperSlPrice" class="text-rose-400 font-bold">$0.00</span>
                             <span id="helperSlPriceInr" class="text-gray-400 block text-[10px]">≈ ₹0.00</span>
                         </div>
@@ -424,21 +424,24 @@
                         </div>
                     </div>
 
-                    <div id="helperGuidanceText" class="text-[11px] text-gray-300 bg-indigo-950/20 border border-indigo-500/30 p-2.5 rounded-xl">
+                    <div id="helperGuidanceText" class="text-[11px] text-gray-300 bg-emerald-950/20 border border-emerald-500/30 p-2.5 rounded-xl">
                         Loading strategy guidance...
                     </div>
                 </div>
 
-                <!-- Custom Size & Order Execution Inputs -->
+                <!-- Custom Size & Order Execution Inputs with 2% Risk Sizing -->
                 <div class="space-y-3">
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-gray-300 font-semibold mb-1">Contract Quantity (Size)</label>
-                            <input type="number" id="helperOrderSize" value="1" min="1" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white font-mono focus:border-blue-500 outline-none">
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="text-gray-300 font-semibold">Contract Size</label>
+                                <span class="text-[10px] text-purple-400 font-bold">2% Risk Model</span>
+                            </div>
+                            <input type="number" id="helperOrderSize" value="1" min="1" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white font-mono focus:border-emerald-500 outline-none">
                         </div>
                         <div>
                             <label class="block text-gray-300 font-semibold mb-1">Trade Direction</label>
-                            <select id="helperOrderSide" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white font-bold focus:border-blue-500 outline-none">
+                            <select id="helperOrderSide" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white font-bold focus:border-emerald-500 outline-none">
                                 <option value="BUY" class="text-emerald-400">🟢 BUY / LONG (1:2 RR)</option>
                                 <option value="SELL" class="text-rose-400">🔴 SELL / SHORT (1:2 RR)</option>
                             </select>
@@ -491,8 +494,8 @@
         <div class="glass-panel border border-bordercolor w-full max-w-xl rounded-3xl shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto custom-scroll">
             <div class="flex items-center justify-between pb-3 mb-4 border-b border-bordercolor">
                 <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-sliders text-blue-400 text-lg"></i>
-                    <h3 class="text-lg font-bold text-white">Bot Configuration & API Settings</h3>
+                    <i class="fa-solid fa-sliders text-emerald-400 text-lg"></i>
+                    <h3 class="text-lg font-bold text-white">Heikin Ashi Strategy Settings</h3>
                 </div>
                 <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
             </div>
@@ -500,32 +503,32 @@
             <form id="settingsForm" onsubmit="saveSettings(event)" class="space-y-4 text-sm">
                 <div>
                     <label class="block text-xs font-semibold text-gray-300 mb-1">Delta Exchange API Key</label>
-                    <input type="text" id="cfgApiKey" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white font-mono text-xs focus:border-blue-500 outline-none" required>
+                    <input type="text" id="cfgApiKey" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white font-mono text-xs focus:border-emerald-500 outline-none" required>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-300 mb-1">Delta Exchange API Secret</label>
-                    <input type="password" id="cfgApiSecret" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white font-mono text-xs focus:border-blue-500 outline-none" required>
+                    <input type="password" id="cfgApiSecret" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white font-mono text-xs focus:border-emerald-500 outline-none" required>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-300 mb-1">Base URL</label>
-                    <input type="text" id="cfgBaseUrl" value="https://cdn-ind.testnet.deltaex.org" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white text-xs focus:border-blue-500 outline-none" required>
+                    <input type="text" id="cfgBaseUrl" value="https://cdn-ind.testnet.deltaex.org" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white text-xs focus:border-emerald-500 outline-none" required>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-300 mb-1">Max Concurrent Positions</label>
-                        <input type="number" id="cfgMaxPos" value="2" min="1" max="10" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white text-xs focus:border-blue-500 outline-none" required>
+                        <label class="block text-xs font-semibold text-gray-300 mb-1">Max Positions</label>
+                        <input type="number" id="cfgMaxPos" value="2" min="1" max="10" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white text-xs focus:border-emerald-500 outline-none" required>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-300 mb-1">Poll Interval (Seconds)</label>
-                        <input type="number" id="cfgPollInterval" value="60" min="10" max="3600" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white text-xs focus:border-blue-500 outline-none" required>
+                        <input type="number" id="cfgPollInterval" value="60" min="10" max="3600" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white text-xs focus:border-emerald-500 outline-none" required>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-300 mb-1">Default Order Size (Contracts)</label>
-                        <input type="number" id="cfgDefaultSize" value="1" min="1" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white text-xs">
+                        <label class="block text-xs font-semibold text-gray-300 mb-1">Risk Per Trade (%)</label>
+                        <input type="number" step="0.5" id="cfgRiskPct" value="2.0" class="w-full bg-darkbg border border-bordercolor rounded-xl px-3 py-2 text-white text-xs" required>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-300 mb-1">Risk-to-Reward Ratio</label>
@@ -535,13 +538,13 @@
 
                 <div class="mt-6 flex justify-end space-x-3 pt-4 border-t border-bordercolor">
                     <button type="button" onclick="closeSettingsModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold rounded-xl">Cancel</button>
-                    <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-600/25">Save & Apply</button>
+                    <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/25">Save & Apply</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Frontend Controller & Dynamic Background Script -->
+    <!-- Frontend Controller & Dynamic Heikin Ashi Background Script -->
     <script>
         let autoScroll = true;
         let currentFilter = 'ALL';
@@ -551,14 +554,15 @@
         const USD_INR_RATE = 85.0;
 
         // -------------------------------------------------------------
-        // Dynamic Trading Chart Background Visual Canvas
+        // Dynamic Heikin Ashi Trading Chart Background Canvas
         // -------------------------------------------------------------
         function initTradeChartBackground() {
             const canvas = document.getElementById('chartBackgroundCanvas');
             const ctx = canvas.getContext('2d');
             let width, height;
             let candles = [];
-            let emaPoints = [];
+            let ema200Points = [];
+            let ema20Points = [];
 
             function resize() {
                 width = canvas.width = window.innerWidth;
@@ -568,22 +572,38 @@
 
             function generateBackgroundData() {
                 candles = [];
-                emaPoints = [];
+                ema200Points = [];
+                ema20Points = [];
                 const candleCount = Math.floor(width / 24);
                 let price = height * 0.55;
-                let ema = price;
+                let ema200 = price;
+                let ema20 = price;
+
+                let prevHaOpen = price;
+                let prevHaClose = price;
 
                 for (let i = 0; i < candleCount; i++) {
-                    const open = price;
-                    const change = (Math.random() - 0.49) * 35;
-                    const close = open + change;
-                    const high = Math.max(open, close) + Math.random() * 20;
-                    const low = Math.min(open, close) - Math.random() * 20;
-                    price = close;
-                    
-                    ema = ema + (close - ema) * 0.12;
-                    candles.push({ open, high, low, close, x: i * 24 });
-                    emaPoints.push({ x: i * 24 + 8, y: ema });
+                    const rawOpen = price;
+                    const change = (Math.random() - 0.49) * 30;
+                    const rawClose = rawOpen + change;
+                    const rawHigh = Math.max(rawOpen, rawClose) + Math.random() * 15;
+                    const rawLow = Math.min(rawOpen, rawClose) - Math.random() * 15;
+                    price = rawClose;
+
+                    // Heikin Ashi calculation
+                    const haClose = (rawOpen + rawHigh + rawLow + rawClose) / 4;
+                    const haOpen = i === 0 ? (rawOpen + rawClose) / 2 : (prevHaOpen + prevHaClose) / 2;
+                    const haHigh = Math.max(rawHigh, haOpen, haClose);
+                    const haLow = Math.min(rawLow, haOpen, haClose);
+                    prevHaOpen = haOpen;
+                    prevHaClose = haClose;
+
+                    ema200 = ema200 + (haClose - ema200) * 0.03;
+                    ema20 = ema20 + (haClose - ema20) * 0.12;
+
+                    candles.push({ haOpen, haHigh, haLow, haClose, x: i * 24 });
+                    ema200Points.push({ x: i * 24 + 8, y: ema200 });
+                    ema20Points.push({ x: i * 24 + 8, y: ema20 });
                 }
             }
 
@@ -610,44 +630,53 @@
                 for (let i = 0; i < candles.length; i++) {
                     const c = candles[i];
                     const volHeight = Math.random() * 60 + 10;
-                    ctx.fillStyle = c.close >= c.open ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)';
+                    ctx.fillStyle = c.haClose >= c.haOpen ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)';
                     ctx.fillRect(c.x, height - volHeight, 14, volHeight);
                 }
 
-                // Candlesticks
+                // Heikin Ashi Candlesticks
                 for (let i = 0; i < candles.length; i++) {
                     const c = candles[i];
-                    const isBull = c.close >= c.open;
+                    const isBull = c.haClose >= c.haOpen;
                     ctx.strokeStyle = isBull ? '#10b981' : '#f43f5e';
                     ctx.fillStyle = isBull ? 'rgba(16, 185, 129, 0.5)' : 'rgba(244, 63, 94, 0.5)';
                     ctx.lineWidth = 1.5;
 
                     // Wick
                     ctx.beginPath();
-                    ctx.moveTo(c.x + 7, c.high);
-                    ctx.lineTo(c.x + 7, c.low);
+                    ctx.moveTo(c.x + 7, c.haHigh);
+                    ctx.lineTo(c.x + 7, c.haLow);
                     ctx.stroke();
 
                     // Body
-                    const bodyTop = Math.min(c.open, c.close);
-                    const bodyHeight = Math.max(Math.abs(c.open - c.close), 3);
+                    const bodyTop = Math.min(c.haOpen, c.haClose);
+                    const bodyHeight = Math.max(Math.abs(c.haOpen - c.haClose), 3);
                     ctx.fillRect(c.x + 1, bodyTop, 12, bodyHeight);
                     ctx.strokeRect(c.x + 1, bodyTop, 12, bodyHeight);
                 }
 
-                // Glowing 200 EMA Line
-                if (emaPoints.length > 1) {
+                // 200 EMA Line (Glowing Amber)
+                if (ema200Points.length > 1) {
                     ctx.beginPath();
-                    ctx.moveTo(emaPoints[0].x, emaPoints[0].y);
-                    for (let i = 1; i < emaPoints.length; i++) {
-                        ctx.lineTo(emaPoints[i].x, emaPoints[i].y);
+                    ctx.moveTo(ema200Points[0].x, ema200Points[0].y);
+                    for (let i = 1; i < ema200Points.length; i++) {
+                        ctx.lineTo(ema200Points[i].x, ema200Points[i].y);
                     }
-                    ctx.strokeStyle = 'rgba(59, 130, 246, 0.7)';
+                    ctx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
                     ctx.lineWidth = 3;
-                    ctx.shadowColor = '#3b82f6';
-                    ctx.shadowBlur = 10;
                     ctx.stroke();
-                    ctx.shadowBlur = 0;
+                }
+
+                // 20 EMA Line (Glowing Cyan)
+                if (ema20Points.length > 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(ema20Points[0].x, ema20Points[0].y);
+                    for (let i = 1; i < ema20Points.length; i++) {
+                        ctx.lineTo(ema20Points[i].x, ema20Points[i].y);
+                    }
+                    ctx.strokeStyle = 'rgba(6, 182, 212, 0.8)';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
                 }
             }
 
@@ -674,7 +703,6 @@
                 document.getElementById('activeTradesCountBadge').innerText = `${active.length} Active`;
                 document.getElementById('historyCountBadge').innerText = `${history.length} Closed`;
 
-                // Update Total Live PnL
                 const totalInr = data.total_unrealized_pnl_inr || 0;
                 const totalUsd = data.total_unrealized_pnl_usd || 0;
                 const pnlEl = document.getElementById('totalLivePnl');
@@ -684,13 +712,12 @@
                 pnlEl.innerText = `${pnlSign}₹${totalInr.toFixed(2)} INR (${pnlSign}$${totalUsd.toFixed(2)})`;
                 document.getElementById('metricUnrealizedPnl').innerText = `Unrealized PnL: ${pnlSign}₹${totalInr.toFixed(2)}`;
 
-                // Render Active Trades
                 if (active.length === 0) {
                     activeTable.innerHTML = `
                         <tr>
                             <td colspan="11" class="py-8 text-center text-gray-400">
                                 <i class="fa-solid fa-satellite-dish text-2xl text-indigo-400 mb-2 block animate-pulse"></i>
-                                <span>No active open trades placed yet. The bot is continuously scanning all perpetual futures for 1:2 RR setups.</span>
+                                <span>No active open trades placed yet. The bot is continuously scanning all perpetual futures for Heikin Ashi 20 EMA pullback setups.</span>
                             </td>
                         </tr>
                     `;
@@ -701,10 +728,9 @@
                         const prodId = pos.product_id;
                         const size = parseFloat(pos.size || 0);
                         const isLong = size > 0;
-                        const sideStr = isLong ? 'BUY / LONG' : 'SELL / SHORT';
                         const sideBadge = isLong ?
-                            '<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">BUY</span>' :
-                            '<span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold border border-rose-500/30">SELL</span>';
+                            '<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">BUY / LONG</span>' :
+                            '<span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold border border-rose-500/30">SELL / SHORT</span>';
 
                         const entryPrice = parseFloat(pos.entry_price || pos.avg_entry_price || 0);
                         const markPrice = parseFloat(pos.mark_price || entryPrice);
@@ -713,12 +739,10 @@
                         const pnlColor = unPnlInr >= 0 ? 'text-emerald-400' : 'text-rose-400';
                         const pnlSignStr = unPnlInr >= 0 ? '+' : '';
 
-                        // Look up SL & TP from recorded trade history or market analysis
                         const recTrade = history.find(t => String(t.product_id) === String(prodId) && t.status === 'OPEN') || {};
                         const sl = recTrade.stop_loss || (isLong ? (entryPrice * 0.985) : (entryPrice * 1.015));
                         const tp = recTrade.take_profit || (isLong ? (entryPrice * 1.03) : (entryPrice * 0.97));
                         const pop = recTrade.pop_percent || 75.0;
-                        const source = recTrade.source || 'BOT';
 
                         html += `
                             <tr class="hover:bg-darkbg/50 transition font-mono">
@@ -727,7 +751,7 @@
                                     <span>${sym}</span>
                                 </td>
                                 <td class="py-3 px-3">${sideBadge}</td>
-                                <td class="py-3 px-3"><span class="px-1.5 py-0.5 rounded text-[10px] bg-indigo-500/20 text-indigo-300">${source}</span></td>
+                                <td class="py-3 px-3"><span class="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-300">HA 20 EMA</span></td>
                                 <td class="py-3 px-3 font-bold text-white">${Math.abs(size)}</td>
                                 <td class="py-3 px-4 text-gray-200">$${entryPrice.toFixed(4)}<span class="block text-[10px] text-gray-400">₹${(entryPrice * USD_INR_RATE).toFixed(2)}</span></td>
                                 <td class="py-3 px-4 text-gray-200">$${markPrice.toFixed(4)}<span class="block text-[10px] text-gray-400">₹${(markPrice * USD_INR_RATE).toFixed(2)}</span></td>
@@ -749,7 +773,6 @@
                     activeTable.innerHTML = html;
                 }
 
-                // Render Closed History
                 if (history.length > 0) {
                     let hHtml = '';
                     for (const h of history) {
@@ -814,14 +837,13 @@
         }
 
         // -------------------------------------------------------------
-        // Status & All-Futures Scanner Logic
+        // Status & Scanner Grid Logic
         // -------------------------------------------------------------
         async function fetchStatus() {
             try {
                 const res = await fetch('/api/status');
                 const data = await res.json();
                 
-                // Update Status Badge
                 const pulse = document.getElementById('statusPulse');
                 const text = document.getElementById('statusText');
                 if (data.is_running) {
@@ -835,7 +857,6 @@
                 }
 
                 document.getElementById('metricPositions').innerText = `${data.active_positions_count} / ${data.max_positions}`;
-                document.getElementById('metricTotalAssets').innerText = `${data.total_futures_count} Futures`;
                 if (data.last_scan_time) {
                     document.getElementById('lastScanLabel').innerHTML = `<i class="fa-solid fa-clock-rotate-left mr-1"></i> Last Scan: ${data.last_scan_time}`;
                 }
@@ -849,7 +870,7 @@
 
         function setFilter(f) {
             currentFilter = f;
-            const buttons = ['ALL', 'HIGH_POP', 'SIGNALS', 'BULLISH', 'BEARISH'];
+            const buttons = ['ALL', 'SIGNALS', 'TOUCHED', 'BULLISH', 'BEARISH'];
             for (const b of buttons) {
                 const btn = document.getElementById(`filterBtn-${b}`);
                 if (btn) {
@@ -877,27 +898,24 @@
             if (entries.length === 0) {
                 grid.innerHTML = `
                     <div class="col-span-full py-12 text-center text-gray-400 glass-panel rounded-2xl">
-                        <i class="fa-solid fa-radar text-3xl text-blue-500 mb-3 animate-pulse"></i>
-                        <p class="text-sm font-semibold">Click [Scan All Futures] or [Start Bot] to begin scanning all Delta Exchange Perpetual Futures.</p>
+                        <i class="fa-solid fa-radar text-3xl text-emerald-500 mb-3 animate-pulse"></i>
+                        <p class="text-sm font-semibold">Click [Scan All Futures] or [Start Bot] to scan Heikin Ashi 200/20 EMA setups.</p>
                     </div>
                 `;
                 return;
             }
 
-            // Filter entries
             let filtered = entries.filter(([sym, info]) => {
                 if (searchVal && !sym.toUpperCase().includes(searchVal) && !(info.underlying || '').toUpperCase().includes(searchVal)) {
                     return false;
                 }
-                const pop = info.pop_percent || 50;
-                if (currentFilter === 'HIGH_POP' && pop < 70) return false;
                 if (currentFilter === 'SIGNALS' && !['BUY', 'SELL'].includes(info.signal)) return false;
-                if (currentFilter === 'BULLISH' && (info.direction !== 'BULLISH' && !(info.trend || '').includes('BULLISH'))) return false;
-                if (currentFilter === 'BEARISH' && (info.direction !== 'BEARISH' && !(info.trend || '').includes('BEARISH'))) return false;
+                if (currentFilter === 'TOUCHED' && !info.ema20_touched) return false;
+                if (currentFilter === 'BULLISH' && info.direction !== 'BULLISH') return false;
+                if (currentFilter === 'BEARISH' && info.direction !== 'BEARISH') return false;
                 return true;
             });
 
-            // Sort: SIGNALS first, then highest PoP %, then alphabetically
             filtered.sort((a, b) => {
                 const aSig = ['BUY', 'SELL'].includes(a[1].signal);
                 const bSig = ['BUY', 'SELL'].includes(b[1].signal);
@@ -919,40 +937,43 @@
                 const price = info.current_price || 0;
                 const priceInr = info.current_price_inr || (price * USD_INR_RATE);
                 const ema200 = info.ema200 || 0;
-                const ema50 = info.ema50 || 0;
-                const pbh = info.pullback_high || 0;
-                const pbl = info.pullback_low || 0;
-                const sl = info.stop_loss || info.recommended_sl || 0;
-                const tp = info.take_profit || info.recommended_tp || 0;
+                const ema20 = info.ema20 || 0;
+                const sl = info.stop_loss || 0;
+                const tp = info.take_profit || 0;
                 const slInr = info.stop_loss_inr || (sl * USD_INR_RATE);
                 const tpInr = info.take_profit_inr || (tp * USD_INR_RATE);
                 const signal = info.signal || 'NEUTRAL';
-                const isBull = info.direction === 'BULLISH' || (info.trend || '').includes('BULLISH');
+                const isBull = info.direction === 'BULLISH';
                 const isSignal = ['BUY', 'SELL'].includes(signal);
                 const pop = info.pop_percent || 60.0;
-                const rsi = info.rsi14 || 50.0;
                 const confidence = info.confidence || 'MODERATE';
+                const haStatus = info.heikin_ashi_status || '🟢 SOLID GREEN HA';
+                const touched20 = info.ema20_touched;
+                const recSize = info.recommended_size || 1;
 
                 const cardBorder = isSignal ? 
                     (signal === 'BUY' ? 'border-emerald-500/80 shadow-emerald-500/20' : 'border-rose-500/80 shadow-rose-500/20') :
                     'border-bordercolor';
 
                 const sigBadge = signal === 'BUY' ?
-                    '<span class="px-2.5 py-1 text-xs font-black rounded-lg bg-emerald-500/25 text-emerald-400 border border-emerald-500/40 animate-pulse">🚀 BUY BREAKOUT</span>' :
+                    '<span class="px-2.5 py-1 text-xs font-black rounded-lg bg-emerald-500/25 text-emerald-400 border border-emerald-500/40 animate-pulse">🚀 BUY TRIGGER</span>' :
                     (signal === 'SELL' ?
-                    '<span class="px-2.5 py-1 text-xs font-black rounded-lg bg-rose-500/25 text-rose-400 border border-rose-500/40 animate-pulse">🔻 SELL BREAKDOWN</span>' :
+                    '<span class="px-2.5 py-1 text-xs font-black rounded-lg bg-rose-500/25 text-rose-400 border border-rose-500/40 animate-pulse">🔻 SELL TRIGGER</span>' :
                     '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-gray-800 text-gray-400">READY</span>');
 
                 const dirBadge = isBull ?
-                    '<span class="px-2.5 py-1 text-[11px] font-black rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center space-x-1"><i class="fa-solid fa-arrow-trend-up"></i><span>BULLISH BIAS (BUY)</span></span>' :
-                    '<span class="px-2.5 py-1 text-[11px] font-black rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center space-x-1"><i class="fa-solid fa-arrow-trend-down"></i><span>BEARISH BIAS (SELL)</span></span>';
+                    '<span class="px-2 py-0.5 text-[11px] font-black rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">🟢 BULLISH (> 200 EMA)</span>' :
+                    '<span class="px-2 py-0.5 text-[11px] font-black rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30">🔴 BEARISH (< 200 EMA)</span>';
 
-                // PoP color class
+                const touchBadge = touched20 ?
+                    '<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">🎯 20 EMA Touched</span>' :
+                    '<span class="px-2 py-0.5 text-[10px] font-medium rounded bg-gray-800 text-gray-400">⏳ Pullback Pending</span>';
+
                 const popColor = pop >= 70 ? 'text-emerald-400' : (pop >= 55 ? 'text-yellow-400' : 'text-gray-400');
                 const popBarColor = pop >= 70 ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : (pop >= 55 ? 'bg-gradient-to-r from-yellow-500 to-amber-400' : 'bg-gray-600');
 
                 html += `
-                    <div class="glass-panel rounded-2xl border ${cardBorder} p-5 shadow-xl flex flex-col justify-between hover:border-blue-500/50 transition duration-150">
+                    <div class="glass-panel rounded-2xl border ${cardBorder} p-5 shadow-xl flex flex-col justify-between hover:border-emerald-500/50 transition duration-150">
                         <div class="space-y-3.5">
                             <!-- Card Header -->
                             <div class="flex items-center justify-between border-b border-bordercolor/60 pb-3">
@@ -961,7 +982,10 @@
                                         <h3 class="font-black text-lg text-white">${sym}</h3>
                                         <span class="text-[10px] text-gray-400 font-mono">#${info.product_id || 'N/A'}</span>
                                     </div>
-                                    <div class="mt-1">${dirBadge}</div>
+                                    <div class="flex items-center space-x-1.5 mt-1">
+                                        ${dirBadge}
+                                        ${touchBadge}
+                                    </div>
                                 </div>
                                 <div class="text-right">${sigBadge}</div>
                             </div>
@@ -969,20 +993,20 @@
                             <!-- Live Price -->
                             <div class="flex items-baseline justify-between bg-darkbg/50 p-2.5 rounded-xl border border-bordercolor/40">
                                 <div>
-                                    <span class="text-[11px] text-gray-400 block">Live Price (USD / INR)</span>
+                                    <span class="text-[11px] text-gray-400 block">5m Close Price (USD / INR)</span>
                                     <span class="text-xl font-black text-white font-mono">$${price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 4})}</span>
                                 </div>
                                 <div class="text-right">
                                     <span class="text-base font-black text-emerald-400 font-mono">≈ ₹${priceInr.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                    <span class="text-[10px] text-gray-400 block">RSI: ${rsi.toFixed(1)}</span>
+                                    <span class="text-[10px] text-gray-400 block">${haStatus}</span>
                                 </div>
                             </div>
 
-                            <!-- Probability of Profit (PoP %) Meter -->
+                            <!-- Probability of Profit & Heikin Ashi Meter -->
                             <div class="bg-darkbg/80 p-3 rounded-xl border border-bordercolor/60 space-y-1.5">
                                 <div class="flex items-center justify-between text-xs">
                                     <span class="text-gray-300 font-bold flex items-center space-x-1.5">
-                                        <i class="fa-solid fa-bullseye text-indigo-400"></i>
+                                        <i class="fa-solid fa-bullseye text-cyan-400"></i>
                                         <span>Probability of Profit (PoP):</span>
                                     </span>
                                     <span class="font-black font-mono text-sm ${popColor}">${pop}%</span>
@@ -992,18 +1016,22 @@
                                 </div>
                                 <div class="flex justify-between text-[10px] text-gray-400 pt-0.5">
                                     <span>${confidence}</span>
-                                    <span>1:2 Risk-to-Reward</span>
+                                    <span class="text-purple-300 font-bold">2% Risk Size: ${recSize} contracts</span>
                                 </div>
                             </div>
 
-                            <!-- Technical Levels: 200 EMA, Pullbacks, SL & 1:2 TP -->
+                            <!-- 200 EMA, 20 EMA, SL & 1:2 TP Details -->
                             <div class="bg-darkbg/60 p-3 rounded-xl border border-bordercolor/40 text-xs space-y-1.5 font-mono">
                                 <div class="flex justify-between text-gray-300">
-                                    <span>200 EMA (5m):</span>
+                                    <span class="text-amber-400 font-semibold">200 EMA (Trend):</span>
                                     <span class="font-bold text-amber-400">$${ema200.toFixed(2)}</span>
                                 </div>
                                 <div class="flex justify-between text-gray-300">
-                                    <span>Stop Loss (SL):</span>
+                                    <span class="text-cyan-400 font-semibold">20 EMA (Pullback):</span>
+                                    <span class="font-bold text-cyan-400">$${ema20.toFixed(2)}</span>
+                                </div>
+                                <div class="flex justify-between text-gray-300">
+                                    <span>Stop Loss (Swing):</span>
                                     <span class="text-rose-400 font-bold">$${sl ? sl.toFixed(4) : '---'} (₹${slInr.toFixed(2)})</span>
                                 </div>
                                 <div class="flex justify-between text-gray-300">
@@ -1013,11 +1041,11 @@
                             </div>
 
                             <!-- Directional Guidance Helper Box -->
-                            <div class="bg-indigo-950/25 p-2.5 rounded-xl border border-indigo-500/30 text-[11px] text-gray-300 flex items-start space-x-2">
-                                <i class="fa-solid fa-circle-info text-indigo-400 mt-0.5"></i>
+                            <div class="bg-emerald-950/20 p-2.5 rounded-xl border border-emerald-500/30 text-[11px] text-gray-300 flex items-start space-x-2">
+                                <i class="fa-solid fa-circle-info text-emerald-400 mt-0.5"></i>
                                 <div>
-                                    <span class="font-bold text-indigo-300">Strategy Direction:</span>
-                                    <span>${isBull ? 'Place BUY / LONG trade when price breaks pullback high.' : 'Place SELL / SHORT trade when price breaks pullback low.'}</span>
+                                    <span class="font-bold text-emerald-300">Strategy Setup:</span>
+                                    <span>${isBull ? 'Look for BUY / LONG when price touches 20 EMA and prints solid Green HA.' : 'Look for SELL / SHORT when price touches 20 EMA and prints solid Red HA.'}</span>
                                 </div>
                             </div>
                         </div>
@@ -1027,7 +1055,7 @@
                             <button onclick="openChartModal('${sym}')" class="px-3 py-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 rounded-xl text-xs font-bold transition">
                                 <i class="fa-solid fa-chart-line mr-1"></i> Chart
                             </button>
-                            <button onclick="openTradeHelper('${sym}')" class="px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-bold transition">
+                            <button onclick="openTradeHelper('${sym}')" class="px-3 py-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition">
                                 <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Setup
                             </button>
                             <button onclick="manualOrder('${sym}', 'BUY')" class="flex-1 py-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold transition">
@@ -1061,20 +1089,20 @@
             badgeEl.className = isBull ? 
                 'px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
                 'px-2.5 py-1 text-xs font-bold rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30';
-            badgeEl.innerText = isBull ? '🟢 BULLISH SETUP' : '🔴 BEARISH SETUP';
+            badgeEl.innerText = isBull ? '🟢 BULLISH (LONG ONLY)' : '🔴 BEARISH (SHORT ONLY)';
 
-            document.getElementById('helperPoP').innerText = `${info.pop_percent || 70}%`;
+            document.getElementById('helperHaStatus').innerText = info.heikin_ashi_status || '🟢 Solid Green HA';
             
-            const sl = info.stop_loss || info.recommended_sl || 0;
-            const tp = info.take_profit || info.recommended_tp || 0;
+            const sl = info.stop_loss || 0;
+            const tp = info.take_profit || 0;
             document.getElementById('helperSlPrice').innerText = `$${sl.toFixed(4)}`;
             document.getElementById('helperSlPriceInr').innerText = `≈ ₹${(sl * USD_INR_RATE).toFixed(2)}`;
             document.getElementById('helperTpPrice').innerText = `$${tp.toFixed(4)}`;
             document.getElementById('helperTpPriceInr').innerText = `≈ ₹${(tp * USD_INR_RATE).toFixed(2)}`;
 
-            document.getElementById('helperGuidanceText').innerText = info.guidance || '1:2 Risk to Reward bracket order attached directly on Delta Exchange.';
+            document.getElementById('helperGuidanceText').innerText = info.guidance || 'Heikin Ashi 200/20 EMA Pullback with 1:2 RR bracket.';
             document.getElementById('helperOrderSide').value = isBull ? 'BUY' : 'SELL';
-            document.getElementById('helperOrderSize').value = info.order_size || 1;
+            document.getElementById('helperOrderSize').value = info.recommended_size || info.order_size || 1;
         }
 
         function closeTradeHelperModal() {
@@ -1087,10 +1115,10 @@
             const symbol = activeHelperData.symbol;
             const side = document.getElementById('helperOrderSide').value;
             const size = parseInt(document.getElementById('helperOrderSize').value) || 1;
-            const sl = activeHelperData.stop_loss || activeHelperData.recommended_sl;
-            const tp = activeHelperData.take_profit || activeHelperData.recommended_tp;
+            const sl = activeHelperData.stop_loss;
+            const tp = activeHelperData.take_profit;
 
-            if (!confirm(`Confirm placing ${side} 1:2 RR bracket order for ${symbol} with ${size} contracts?`)) return;
+            if (!confirm(`Confirm placing Heikin Ashi ${side} 1:2 RR bracket order for ${symbol} with ${size} contracts (2% Risk Sizing)?`)) return;
 
             try {
                 const res = await fetch('/api/order/place', {
@@ -1152,7 +1180,7 @@
         async function openChartModal(symbol) {
             document.getElementById('chartModal').classList.remove('hidden');
             document.getElementById('modalChartSymbol').innerText = symbol;
-            document.getElementById('modalChartMeta').innerText = `Loading 5m candlestick data & 200/50 EMA for ${symbol}...`;
+            document.getElementById('modalChartMeta').innerText = `Loading 5m Heikin Ashi candles & 200/20 EMA for ${symbol}...`;
 
             try {
                 const res = await fetch(`/api/candles/${symbol}?resolution=5m&lookback_days=2`);
@@ -1174,11 +1202,11 @@
             }
 
             const labels = candles.map(c => new Date(c.time * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
-            const closePrices = candles.map(c => c.close);
-            const emaValues = candles.map(c => c.ema200);
-            const ema50Values = candles.map(c => c.ema50);
+            const haClosePrices = candles.map(c => c.ha_close || c.close);
+            const ema200Values = candles.map(c => c.ema200);
+            const ema20Values = candles.map(c => c.ema20);
 
-            document.getElementById('modalChartMeta').innerText = `Latest: $${closePrices[closePrices.length-1]} | 200 EMA: $${emaValues[emaValues.length-1]?.toFixed(2)} | 50 EMA: $${ema50Values[ema50Values.length-1]?.toFixed(2)} (1:2 RR Bracket Preview)`;
+            document.getElementById('modalChartMeta').innerText = `Latest HA Close: $${haClosePrices[haClosePrices.length-1]?.toFixed(2)} | 20 EMA: $${ema20Values[ema20Values.length-1]?.toFixed(2)} | 200 EMA: $${ema200Values[ema200Values.length-1]?.toFixed(2)}`;
 
             modalChartInstance = new Chart(ctx, {
                 type: 'line',
@@ -1186,30 +1214,29 @@
                     labels: labels,
                     datasets: [
                         {
-                            label: `${symbol} Close Price`,
-                            data: closePrices,
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                            label: `${symbol} 5m Heikin Ashi Close`,
+                            data: haClosePrices,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.08)',
                             fill: true,
                             tension: 0.1,
                             borderWidth: 2,
                             pointRadius: 0
                         },
                         {
-                            label: '200 EMA',
-                            data: emaValues,
+                            label: '20 EMA (Pullback)',
+                            data: ema20Values,
+                            borderColor: '#06b6d4',
+                            borderWidth: 2,
+                            pointRadius: 0
+                        },
+                        {
+                            label: '200 EMA (Trend Filter)',
+                            data: ema200Values,
                             borderColor: '#f59e0b',
                             borderWidth: 2,
                             pointRadius: 0,
                             borderDash: [4, 4]
-                        },
-                        {
-                            label: '50 EMA',
-                            data: ema50Values,
-                            borderColor: '#a855f7',
-                            borderWidth: 1.5,
-                            pointRadius: 0,
-                            borderDash: [2, 2]
                         }
                     ]
                 },
@@ -1385,7 +1412,7 @@
                 document.getElementById('cfgBaseUrl').value = data.base_url || 'https://cdn-ind.testnet.deltaex.org';
                 document.getElementById('cfgMaxPos').value = data.max_positions || 2;
                 document.getElementById('cfgPollInterval').value = data.poll_interval || 60;
-                document.getElementById('cfgDefaultSize').value = data.default_order_size || 1;
+                document.getElementById('cfgRiskPct').value = data.risk_per_trade_pct || 2.0;
                 document.getElementById('cfgRrRatio').value = data.risk_reward_ratio || 2.0;
             } catch (err) { console.error('Error loading settings:', err); }
         }
@@ -1402,7 +1429,7 @@
                 base_url: document.getElementById('cfgBaseUrl').value,
                 max_positions: parseInt(document.getElementById('cfgMaxPos').value),
                 poll_interval: parseInt(document.getElementById('cfgPollInterval').value),
-                default_order_size: parseInt(document.getElementById('cfgDefaultSize').value),
+                risk_per_trade_pct: parseFloat(document.getElementById('cfgRiskPct').value),
                 risk_reward_ratio: parseFloat(document.getElementById('cfgRrRatio').value),
             };
 
@@ -1424,7 +1451,7 @@
         }
 
         async function manualOrder(symbol, side) {
-            if (!confirm(`Place manual ${side} market bracket order for ${symbol} with 1:2 RR?`)) return;
+            if (!confirm(`Place manual Heikin Ashi ${side} 1:2 RR bracket order for ${symbol}?`)) return;
             try {
                 const res = await fetch('/api/order/place', {
                     method: 'POST',
